@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nómina Proveedores — Transportes Bello</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #181c27;
+    --surface2: #1e2333;
+    --border: #2a3048;
+    --accent: #3b82f6;
+    --accent-dim: #1e40af;
+    --green: #22c55e;
+    --red: #ef4444;
+    --yellow: #f59e0b;
+    --text: #e2e8f0;
+    --text-muted: #64748b;
+    --text-dim: #94a3b8;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Header ── */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+  .logo-badge {
+    background: var(--accent);
+    color: #fff;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 4px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+  header h1 {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text-dim);
+    letter-spacing: .02em;
+  }
+  header h1 span { color: var(--text); font-weight: 600; }
+
+  /* ── Layout ── */
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 32px 24px;
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: 24px;
+    align-items: start;
+  }
+
+  /* ── Panel ── */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .panel-header {
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .panel-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .panel-body { padding: 20px; }
+
+  /* ── Cabecera config ── */
+  .config-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .config-grid .full { grid-column: 1 / -1; }
+
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label {
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: var(--text-muted);
+    font-family: var(--mono);
+  }
+  .field label .required { color: var(--red); margin-left: 3px; }
+
+  input, select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 9px 12px;
+    outline: none;
+    transition: border-color .15s;
+    width: 100%;
+  }
+  input:focus, select:focus { border-color: var(--accent); }
+  input::placeholder { color: var(--text-muted); }
+  select option { background: var(--surface2); }
+
+  /* ── Agregar proveedor ── */
+  .add-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+  }
+  .add-form .span2 { grid-column: span 2; }
+  .add-form .span3 { grid-column: 1 / -1; }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 500;
+    padding: 10px 18px;
+    transition: all .15s;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #2563eb; }
+  .btn-danger { background: transparent; border: 1px solid var(--red); color: var(--red); padding: 5px 10px; font-size: 11px; }
+  .btn-danger:hover { background: var(--red); color: #fff; }
+  .btn-success { background: var(--green); color: #000; font-weight: 600; }
+  .btn-success:hover { background: #16a34a; }
+  .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-dim); }
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+
+  /* ── Tabla ── */
+  .table-wrap {
+    overflow-x: auto;
+    max-height: 340px;
+    overflow-y: auto;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+  th {
+    background: var(--surface2);
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    padding: 10px 14px;
+    text-align: left;
+    position: sticky;
+    top: 0;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: 10px 14px;
+    border-bottom: 1px solid #1a1f2e;
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface2); }
+  .td-rut { color: var(--text); font-weight: 500; }
+  .td-monto { color: var(--green); font-weight: 600; text-align: right; }
+  .td-nom { color: var(--text); max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
+
+  /* ── Totales ── */
+  .totals-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 16px;
+  }
+  .total-item { text-align: center; }
+  .total-label { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--text-muted); margin-bottom: 4px; font-family: var(--mono); }
+  .total-value { font-family: var(--mono); font-size: 20px; font-weight: 600; color: var(--text); }
+  .total-value.green { color: var(--green); }
+
+  /* ── Sidebar ── */
+  .sidebar { display: flex; flex-direction: column; gap: 20px; }
+
+  .info-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #1e3a5f;
+    border: 1px solid #2563eb44;
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 12px;
+    color: #93c5fd;
+  }
+  .info-badge svg { flex-shrink: 0; opacity: .7; }
+
+  .preview-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--text-muted);
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 220px;
+    overflow-y: auto;
+    min-height: 80px;
+  }
+  .preview-line-hdr { color: var(--yellow); }
+  .preview-line-rec { color: var(--text-dim); }
+
+  /* ── Empty state ── */
+  .empty-state {
+    text-align: center;
+    padding: 48px 20px;
+    color: var(--text-muted);
+  }
+  .empty-state svg { opacity: .3; margin-bottom: 12px; }
+  .empty-state p { font-size: 13px; }
+
+  /* ── Toast ── */
+  #toast {
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    background: var(--green);
+    color: #000;
+    font-weight: 600;
+    font-size: 13px;
+    padding: 12px 20px;
+    border-radius: 8px;
+    transform: translateY(80px);
+    opacity: 0;
+    transition: all .3s;
+    z-index: 999;
+  }
+  #toast.show { transform: translateY(0); opacity: 1; }
+  #toast.error { background: var(--red); color: #fff; }
+
+  hr.divider { border: none; border-top: 1px solid var(--border); margin: 18px 0; }
+
+  .chip {
+    display: inline-block;
+    background: #1e3a5f;
+    color: #93c5fd;
+    border-radius: 4px;
+    padding: 2px 7px;
+    font-size: 10px;
+    font-family: var(--mono);
+    font-weight: 600;
+  }
+  .chip.green { background: #14532d; color: #86efac; }
+  .chip.yellow { background: #451a03; color: #fcd34d; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-badge">TB</div>
+  <h1><span>Nómina Proveedores</span> — Generador de Archivo TXT</h1>
+</header>
+
+<div class="container">
+
+  <!-- ═══ Columna principal ═══ -->
+  <div style="display:flex;flex-direction:column;gap:24px;">
+
+    <!-- Cabecera del archivo -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">① Cabecera del Archivo</span>
+        <span class="chip">Obligatorio</span>
+      </div>
+      <div class="panel-body">
+        <div class="config-grid">
+          <div class="field">
+            <label>RUT Empresa<span class="required">*</span></label>
+            <input type="text" id="rutEmpresa" placeholder="ej: 76123456K" maxlength="11">
+          </div>
+          <div class="field">
+            <label>N° Cuenta de Cargo<span class="required">*</span></label>
+            <input type="text" id="ctaCargo" placeholder="ej: 0012345678">
+          </div>
+          <div class="field">
+            <label>Tipo de Servicio<span class="required">*</span></label>
+            <select id="tipoServicio">
+              <option value="005003">005003 — PAGO DE PROVEEDORES</option>
+              <option value="007001">007001 — TRANSFERENCIAS</option>
+              <option value="006003">006003 — PAGO DE HONORARIOS</option>
+              <option value="005001">005001 — PAGO DE DIVIDENDOS</option>
+              <option value="005002">005002 — DEVOLUCION IMPUESTO</option>
+              <option value="006001">006001 — PAGO DE SUELDOS</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Tipo Cuenta Cargo</label>
+            <select id="tipoCuentaCargo">
+              <option value="CAT_CSH_CCTE">CAT_CSH_CCTE — Cuenta Corriente</option>
+              <option value="CAT_CSH_CVIS">CAT_CSH_CVIS — Cuenta Vista</option>
+              <option value="CAT_CSH_CINT">CAT_CSH_CINT — Cuenta Intereses</option>
+            </select>
+          </div>
+          <div class="field full">
+            <label>Descripción del Pago</label>
+            <input type="text" id="descripcion" placeholder="ej: Pago facturas proveedores semana 10" maxlength="40">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Agregar proveedor -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">② Agregar Proveedor</span>
+        <span class="chip yellow">Email fijo: finanzas@transportesbello.com</span>
+      </div>
+      <div class="panel-body">
+        <div class="add-form" id="addForm">
+          <div class="field">
+            <label>RUT<span class="required">*</span></label>
+            <input type="text" id="pRut" placeholder="ej: 12345678K" maxlength="11">
+          </div>
+          <div class="field span2">
+            <label>Nombre / Razón Social<span class="required">*</span></label>
+            <input type="text" id="pNombre" placeholder="ej: Servicios Técnicos SpA" maxlength="100">
+          </div>
+          <div class="field">
+            <label>Monto<span class="required">*</span></label>
+            <input type="text" id="pMonto" placeholder="ej: 1500000">
+          </div>
+          <div class="field">
+            <label>Método de Pago<span class="required">*</span></label>
+            <select id="pMetodo">
+              <option value="CAT_CSH_TRANSFER">Transferencia</option>
+              <option value="CAT_CSH_VIRTUAL_OFFICE_CHECK">Vale Vista Virtual</option>
+              <option value="CAT_CSH_PRINTED_OFFICE_CHECK">Vale Vista Impreso</option>
+              <option value="CAT_CSH_PAYMENT_ORDER">Orden de Pago</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Código Banco<span class="required">*</span></label>
+            <select id="pBanco">
+              <option value="039">039 — ITAÚ</option>
+              <option value="001">001 — CHILE</option>
+              <option value="009">009 — INTERNACIONAL</option>
+              <option value="012">012 — ESTADO</option>
+              <option value="014">014 — SCOTIABANK</option>
+              <option value="016">016 — BCO CREDITO</option>
+              <option value="027">027 — CORPBANCA</option>
+              <option value="028">028 — BICE</option>
+              <option value="031">031 — HSBC</option>
+              <option value="037">037 — SANTANDER</option>
+              <option value="049">049 — SECURITY</option>
+              <option value="051">051 — FALABELLA</option>
+              <option value="053">053 — RIPLEY</option>
+              <option value="055">055 — CONSORCIO</option>
+              <option value="504">504 — BBVA</option>
+              <option value="507">507 — DESARROLLO</option>
+            </select>
+          </div>
+          <div class="field" id="fieldTipoCuenta">
+            <label>Tipo de Cuenta</label>
+            <select id="pTipoCuenta">
+              <option value="CAT_CSH_CCTE">CAT_CSH_CCTE — Corriente</option>
+              <option value="CAT_CSH_CVIS">CAT_CSH_CVIS — Vista</option>
+              <option value="CAT_CSH_CINT">CAT_CSH_CINT — Intereses</option>
+            </select>
+          </div>
+          <div class="field span2" id="fieldNroCuenta">
+            <label>N° Cuenta</label>
+            <input type="text" id="pNroCuenta" placeholder="ej: 0012345678" maxlength="50">
+          </div>
+          <div class="field span3">
+            <label>Glosa / Detalle (opcional)</label>
+            <input type="text" id="pGlosa" placeholder="ej: Fact 123 - Servicios marzo 2024" maxlength="100">
+          </div>
+        </div>
+        <div style="margin-top:16px;display:flex;gap:10px;">
+          <button class="btn btn-primary" onclick="agregarProveedor()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Agregar Proveedor
+          </button>
+          <button class="btn btn-outline" onclick="limpiarForm()">Limpiar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabla de proveedores -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">③ Proveedores en Nómina</span>
+        <span id="counterBadge" class="chip green">0 registros</span>
+      </div>
+      <div id="tableContainer">
+        <div class="empty-state">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+          <p>Sin proveedores agregados aún.<br>Completa el formulario y presiona "Agregar Proveedor".</p>
+        </div>
+      </div>
+      <div class="totals-box" id="totalsBox" style="display:none;margin:0 20px 20px;">
+        <div class="total-item">
+          <div class="total-label">Registros</div>
+          <div class="total-value" id="totalReg">0</div>
+        </div>
+        <div class="total-item">
+          <div class="total-label">Monto Total</div>
+          <div class="total-value green" id="totalMonto">$0</div>
+        </div>
+        <div style="display:flex;gap:10px;">
+          <button class="btn btn-outline btn-sm" onclick="exportarCSV()" style="font-size:12px;padding:8px 14px;">Exportar CSV</button>
+          <button class="btn btn-success" onclick="generarTXT()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Generar TXT
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══ Sidebar ═══ -->
+  <div class="sidebar">
+
+    <div class="info-badge">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      El email del beneficiario se fija automáticamente en <strong style="color:#fff;margin-left:4px;">finanzas@transportesbello.com</strong>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Vista Previa TXT</span>
+      </div>
+      <div class="panel-body" style="padding:14px;">
+        <div class="preview-box" id="previewBox">El archivo TXT aparecerá aquí cuando tengas al menos 1 proveedor…</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Referencia Rápida</span>
+      </div>
+      <div class="panel-body" style="font-size:12px;color:var(--text-dim);line-height:1.8;">
+        <strong style="color:var(--text);font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-family:var(--mono);">Estructura del TXT</strong>
+        <hr class="divider">
+        <p><span style="color:var(--yellow)">Cabecera:</span> RutEmpresa, ContRegistros, SumRegistros, TipoServicio, MedioRespaldo, CtaCargo, Descripción…</p>
+        <hr class="divider">
+        <p><span style="color:var(--accent)">Registros:</span> RUT, Nombre, Email, MetodoPago, Banco, TipoCuenta, NroCuenta, Fecha, Ref1, Ref2, Monto, TipoCuentaCargo, NroCuentaCargo, Sucursal, RefCliente, Glosa…</p>
+        <hr class="divider">
+        <p>Separador: <span style="font-family:var(--mono);color:var(--text)">coma (,)</span></p>
+        <p>Codificación: <span style="font-family:var(--mono);color:var(--text)">UTF-8</span></p>
+        <p>Sucursal Itaú: <span style="font-family:var(--mono);color:var(--green)">001</span> (auto)</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div id="toast">✓ Acción realizada</div>
+
+<script>
+const EMAIL_FIJO = 'finanzas@transportesbello.com';
+let proveedores = [];
+
+// Mostrar/ocultar campos según método de pago
+document.getElementById('pMetodo').addEventListener('change', function() {
+  const esTransfer = this.value === 'CAT_CSH_TRANSFER';
+  document.getElementById('fieldTipoCuenta').style.opacity = esTransfer ? '1' : '.4';
+  document.getElementById('fieldNroCuenta').style.opacity = esTransfer ? '1' : '.4';
+});
+
+function limpiarRut(rut) {
+  return rut.replace(/[.\-\s]/g, '').toUpperCase();
+}
+
+function fmtMonto(n) {
+  return new Intl.NumberFormat('es-CL').format(n);
+}
+
+function toast(msg, isError=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = isError ? 'show error' : 'show';
+  setTimeout(() => t.className = '', 2500);
+}
+
+function agregarProveedor() {
+  const rut = limpiarRut(document.getElementById('pRut').value.trim());
+  const nombre = document.getElementById('pNombre').value.trim();
+  const montoRaw = document.getElementById('pMonto').value.replace(/[.,\s]/g,'');
+  const monto = parseInt(montoRaw, 10);
+  const metodo = document.getElementById('pMetodo').value;
+  const banco = document.getElementById('pBanco').value;
+  const tipoCuenta = document.getElementById('pTipoCuenta').value;
+  const nroCuenta = document.getElementById('pNroCuenta').value.trim();
+  const glosa = document.getElementById('pGlosa').value.trim();
+
+  if (!rut || rut.length < 8) return toast('⚠ Ingresa un RUT válido', true);
+  if (!nombre) return toast('⚠ Ingresa el nombre/razón social', true);
+  if (!monto || monto <= 0) return toast('⚠ Ingresa un monto válido', true);
+  if (metodo === 'CAT_CSH_TRANSFER' && !nroCuenta) return toast('⚠ Ingresa el N° de cuenta para transferencia', true);
+
+  proveedores.push({ rut, nombre, monto, metodo, banco, tipoCuenta, nroCuenta, glosa });
+  limpiarForm();
+  renderTabla();
+  actualizarPreview();
+  toast(`✓ ${nombre} agregado`);
+}
+
+function limpiarForm() {
+  ['pRut','pNombre','pMonto','pNroCuenta','pGlosa'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('pMetodo').value = 'CAT_CSH_TRANSFER';
+  document.getElementById('pBanco').value = '039';
+  document.getElementById('pTipoCuenta').value = 'CAT_CSH_CCTE';
+}
+
+function eliminarProveedor(i) {
+  const nombre = proveedores[i].nombre;
+  proveedores.splice(i, 1);
+  renderTabla();
+  actualizarPreview();
+  toast(`Eliminado: ${nombre}`);
+}
+
+function renderTabla() {
+  const container = document.getElementById('tableContainer');
+  const totalBox = document.getElementById('totalsBox');
+  const badge = document.getElementById('counterBadge');
+  badge.textContent = `${proveedores.length} registro${proveedores.length !== 1 ? 's' : ''}`;
+
+  if (proveedores.length === 0) {
+    container.innerHTML = `<div class="empty-state"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg><p>Sin proveedores agregados aún.</p></div>`;
+    totalBox.style.display = 'none';
+    return;
+  }
+
+  totalBox.style.display = 'flex';
+  const totalMonto = proveedores.reduce((s, p) => s + p.monto, 0);
+  document.getElementById('totalReg').textContent = proveedores.length;
+  document.getElementById('totalMonto').textContent = `$${fmtMonto(totalMonto)}`;
+
+  const metodosMap = {
+    'CAT_CSH_TRANSFER': 'Transferencia',
+    'CAT_CSH_VIRTUAL_OFFICE_CHECK': 'VV Virtual',
+    'CAT_CSH_PRINTED_OFFICE_CHECK': 'VV Impreso',
+    'CAT_CSH_PAYMENT_ORDER': 'Orden Pago',
+  };
+
+  let html = `<div class="table-wrap"><table>
+    <thead><tr>
+      <th>#</th><th>RUT</th><th>Nombre / Razón Social</th><th>Monto</th><th>Método</th><th>Banco</th><th>N° Cuenta</th><th>Glosa</th><th></th>
+    </tr></thead><tbody>`;
+
+  proveedores.forEach((p, i) => {
+    html += `<tr>
+      <td style="color:var(--text-muted)">${i+1}</td>
+      <td class="td-rut">${p.rut}</td>
+      <td class="td-nom">${p.nombre}</td>
+      <td class="td-monto">$${fmtMonto(p.monto)}</td>
+      <td><span class="chip">${metodosMap[p.metodo] || p.metodo}</span></td>
+      <td>${p.banco}</td>
+      <td>${p.nroCuenta || '—'}</td>
+      <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;color:var(--text-muted)">${p.glosa || '—'}</td>
+      <td><button class="btn btn-danger" onclick="eliminarProveedor(${i})">✕</button></td>
+    </tr>`;
+  });
+
+  html += `</tbody></table></div>`;
+  container.innerHTML = html;
+}
+
+function construirTXT() {
+  const rutEmpresa = limpiarRut(document.getElementById('rutEmpresa').value.trim());
+  const ctaCargo = document.getElementById('ctaCargo').value.trim();
+  const tipoServicio = document.getElementById('tipoServicio').value;
+  const tipoCuentaCargo = document.getElementById('tipoCuentaCargo').value;
+  const descripcion = document.getElementById('descripcion').value.trim() || 'PAGO PROVEEDORES';
+  const MEDIO_RESPALDO = 'CAT_CSH_CONTRACT_ACCOUNT';
+
+  const contReg = proveedores.length;
+  const sumReg = proveedores.reduce((s, p) => s + p.monto, 0);
+
+  // Cabecera: RutEmpresa,ContRegistros,SumRegistros,TipoServicio,MedioRespaldo,CtaCargo,Descripción,GlosaCuentaCargo,GlosaCuentaAbono
+  const cabecera = [rutEmpresa, contReg, sumReg, tipoServicio, MEDIO_RESPALDO, ctaCargo, descripcion, '', ''].join(',');
+
+  const lineas = [cabecera];
+
+  proveedores.forEach(p => {
+    const esTransfer = p.metodo === 'CAT_CSH_TRANSFER';
+    const sucursal = p.banco === '039' ? '001' : '';
+
+    // Registro: RutBeneficiario,NombreBenefic,EmailBeneficiario,MetodoDePago,CodigoBancoAbono,TipoDeCuentaAbono,NroDeCuentaAbono,
+    //           FechaDePago,Referencia1,Referencia2,MontoDelPago,TipoCuentaCargo,NroCuentaCargo,CodigoSucursal,
+    //           ReferenciaCliente,GlosaDelPago,GlosaCuentaOrigen,GlosaCuentaDestino
+    const reg = [
+      p.rut,
+      p.nombre,
+      EMAIL_FIJO,
+      p.metodo,
+      p.banco,
+      esTransfer ? p.tipoCuenta : '',
+      esTransfer ? p.nroCuenta : '',
+      '',   // FechaDePago
+      '',   // Referencia1
+      '',   // Referencia2
+      p.monto,
+      tipoCuentaCargo,
+      ctaCargo,
+      sucursal,
+      '',   // ReferenciaCliente
+      p.glosa || '',
+      '',   // GlosaCuentaOrigen
+      '',   // GlosaCuentaDestino
+    ].join(',');
+
+    lineas.push(reg);
+  });
+
+  return lineas.join('\n');
+}
+
+function actualizarPreview() {
+  const prev = document.getElementById('previewBox');
+  if (proveedores.length === 0) {
+    prev.textContent = 'El archivo TXT aparecerá aquí cuando tengas al menos 1 proveedor…';
+    return;
+  }
+  const txt = construirTXT();
+  const lines = txt.split('\n');
+  let html = '';
+  lines.forEach((l, i) => {
+    const cls = i === 0 ? 'preview-line-hdr' : 'preview-line-rec';
+    html += `<span class="${cls}">${escapeHtml(l)}</span>\n`;
+  });
+  prev.innerHTML = html;
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function generarTXT() {
+  const rutEmpresa = limpiarRut(document.getElementById('rutEmpresa').value.trim());
+  const ctaCargo = document.getElementById('ctaCargo').value.trim();
+  if (!rutEmpresa) return toast('⚠ Ingresa el RUT de la empresa', true);
+  if (!ctaCargo) return toast('⚠ Ingresa el N° de cuenta de cargo', true);
+  if (proveedores.length === 0) return toast('⚠ Agrega al menos un proveedor', true);
+
+  const txt = construirTXT();
+  const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const fecha = new Date().toISOString().slice(0,10).replace(/-/g,'');
+  a.href = url;
+  a.download = `nomina_proveedores_${fecha}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('✓ Archivo TXT descargado exitosamente');
+}
+
+function exportarCSV() {
+  if (proveedores.length === 0) return;
+  const header = 'RUT,Nombre,Email,Método,Banco,Tipo Cuenta,N° Cuenta,Monto,Glosa\n';
+  const rows = proveedores.map(p =>
+    [p.rut, `"${p.nombre}"`, EMAIL_FIJO, p.metodo, p.banco, p.tipoCuenta, p.nroCuenta, p.monto, `"${p.glosa}"`].join(',')
+  ).join('\n');
+  const blob = new Blob(['\uFEFF' + header + rows], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'proveedores.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('✓ CSV exportado');
+}
+
+// Trigger para actualizar preview al editar cabecera
+['rutEmpresa','ctaCargo','tipoServicio','tipoCuentaCargo','descripcion'].forEach(id => {
+  document.getElementById(id).addEventListener('input', actualizarPreview);
+  document.getElementById(id).addEventListener('change', actualizarPreview);
+});
+
+// Enter en el formulario agrega proveedor
+document.querySelectorAll('#addForm input').forEach(inp => {
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') agregarProveedor(); });
+});
+</script>
+</body>
+</html>
