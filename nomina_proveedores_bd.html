@@ -205,7 +205,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:14px 0}
             </select>
           </div>
           <div class="field span2"><label>N° Cuenta<span class="req">*</span></label><input id="npNroCuenta" placeholder="ej: 12345678"></div>
-          <div class="field"><label>Monto<span class="req">*</span></label><input id="npMonto" placeholder="ej: 1500000"></div>
+          <div class="field"><label>Monto<span class="req">*</span></label><input id="npMonto" placeholder="ej: 1500000"><span style="font-size:10px;color:var(--yellow);font-family:var(--mono);margin-top:3px">Se divide si supera $7.000.000</span></div>
           <div class="field"><label>Glosa / Detalle</label><input id="npGlosa" placeholder="ej: Fact 123"></div>
         </div>
         <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
@@ -237,7 +237,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:14px 0}
 
       <!-- Monto y glosa para BD -->
       <div class="add-row" id="addRow" style="display:none">
-        <div class="field"><label>Monto<span class="req">*</span></label><input id="pMonto" placeholder="ej: 1500000" type="text"></div>
+        <div class="field"><label>Monto<span class="req">*</span></label><input id="pMonto" placeholder="ej: 1500000" type="text"><span style="font-size:10px;color:var(--yellow);font-family:var(--mono);margin-top:3px">Si supera $7.000.000 se divide en líneas automáticamente</span></div>
         <div class="field"><label>Glosa / Detalle</label><input id="pGlosa" placeholder="ej: Fact 123 - Marzo" maxlength="100"></div>
       </div>
       <div style="margin-top:14px;display:flex;gap:10px" id="addBtnRow" style="display:none">
@@ -411,17 +411,37 @@ function limpiarSeleccion(){
   notFoundBtn.style.display='none';
 }
 
+const LIMITE = 7000000;
+
+function dividirEnLineas(prov, monto, glosa, esNuevo){
+  const total = Math.ceil(monto / LIMITE);
+  const lineas = [];
+  let restante = monto;
+  for(let n=1; restante>0; n++){
+    const parcial = Math.min(restante, LIMITE);
+    const g = total>1 ? (glosa ? glosa+' ('+n+'/'+total+')' : 'Línea '+n+' de '+total) : glosa;
+    lineas.push({...prov, monto:parcial, glosa:g, esNuevo});
+    restante -= parcial;
+  }
+  return lineas;
+}
+
 function agregarProveedor(){
   if(!selected) return;
   const montoRaw = document.getElementById('pMonto').value.replace(/[.,\s]/g,'');
   const monto = parseInt(montoRaw,10);
   if(!monto||monto<=0) return toast('⚠ Ingresa un monto válido',true);
   const glosa = document.getElementById('pGlosa').value.trim();
-  nomina.push({...selected, monto, glosa, esNuevo:false});
+  const lineas = dividirEnLineas(selected, monto, glosa, false);
+  lineas.forEach(l=>nomina.push(l));
+  const nombre = selected.nombre.split(' ')[0];
   limpiarSeleccion();
   renderTabla();
   actualizarPreview();
-  toast('✓ '+nomina[nomina.length-1].nombre.split(' ')[0]+' agregado');
+  if(lineas.length>1)
+    toast('✓ '+nombre+' — dividido en '+lineas.length+' líneas de $'+new Intl.NumberFormat('es-CL').format(LIMITE));
+  else
+    toast('✓ '+nombre+' agregado');
 }
 
 document.getElementById('pMonto').addEventListener('keydown',e=>{if(e.key==='Enter')agregarProveedor();});
@@ -472,25 +492,31 @@ function validarFormNuevo(){
 function agregarNuevoProveedor(){
   const p = validarFormNuevo();
   if(!p) return;
-  nomina.push({...p, esNuevo:true});
+  const lineas = dividirEnLineas(p, p.monto, p.glosa, true);
+  lineas.forEach(l=>nomina.push(l));
   cerrarFormNuevo();
   renderTabla();
   actualizarPreview();
-  toast('✓ '+p.nombre.split(' ')[0]+' agregado a nómina');
+  if(lineas.length>1)
+    toast('✓ '+p.nombre.split(' ')[0]+' — dividido en '+lineas.length+' líneas');
+  else
+    toast('✓ '+p.nombre.split(' ')[0]+' agregado a nómina');
 }
 
 function agregarYGuardar(){
   const p = validarFormNuevo();
   if(!p) return;
-  // Agregar a DB en memoria
   const dbEntry = {rut:p.rut,nombre:p.nombre,metodo:p.metodo,banco:p.banco,tipoCuenta:p.tipoCuenta,nroCuenta:p.nroCuenta};
   DB.push(dbEntry);
-  // Agregar a nómina
-  nomina.push({...p, esNuevo:true});
+  const lineas = dividirEnLineas(p, p.monto, p.glosa, true);
+  lineas.forEach(l=>nomina.push(l));
   cerrarFormNuevo();
   renderTabla();
   actualizarPreview();
-  toast('✓ '+p.nombre.split(' ')[0]+' guardado en BD y agregado');
+  if(lineas.length>1)
+    toast('✓ '+p.nombre.split(' ')[0]+' guardado en BD — '+lineas.length+' líneas');
+  else
+    toast('✓ '+p.nombre.split(' ')[0]+' guardado en BD y agregado');
 }
 
 function eliminar(i){
