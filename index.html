@@ -173,9 +173,11 @@
   .pill { display:inline-block; background:rgba(245,166,35,.12); color:var(--accent); font-size:0.58rem; padding:.12rem .5rem; border-radius:20px; letter-spacing:1px; }
 
   /* Info tooltip */
-  .info-row { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.6rem; }
+  .info-row { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.6rem; flex-wrap: wrap; }
   .info-tag { font-size: 0.6rem; color: var(--muted); background: rgba(255,255,255,.04); border: 1px solid var(--border); border-radius: 5px; padding: 0.2rem 0.5rem; }
   .info-tag span { color: var(--accent); }
+  .info-tag.warn-tag { border-color: rgba(245,158,11,.3); color: #f59e0b; }
+  .info-tag.warn-tag span { color: #fbbf24; }
 </style>
 </head>
 <body>
@@ -233,6 +235,7 @@
     <div class="info-row">
       <div class="info-tag">MedioRespaldo fijo: <span>CAT_CSH_CONTRACT_ACCOUNT</span></div>
       <div class="info-tag">Cuenta cargo tipo: <span>CAT_CSH_CCTE</span></div>
+      <div class="info-tag warn-tag">Cta. Ahorro → <span>CAT_CSH_CVIS (auto)</span></div>
     </div>
   </div>
 
@@ -246,7 +249,7 @@
       <div class="drop-hint">
         <strong>Toca para seleccionar el archivo de RRHH</strong>
         xlsx, xlsm, xls o csv · detecta automáticamente la fila de datos<br>
-        <small style="color:#3d3f5a;margin-top:.3rem;display:block">⚠ Si el archivo tiene una fila de TOTALES al final, será excluida automáticamente</small>
+        <small style="color:#3d3f5a;margin-top:.3rem;display:block">⚠ Fila de TOTALES al final será excluida automáticamente · Cuentas de ahorro se convierten a Cta. Vista</small>
       </div>
     </div>
 
@@ -263,7 +266,6 @@
       <table id="prevTable"></table>
     </div>
 
-    <!-- Vista previa del TXT -->
     <div class="txt-prev" id="txtPrev"></div>
 
     <button class="btn" id="genBtn" onclick="generar()">⬇ GENERAR ARCHIVO TXT PARA BANCO</button>
@@ -297,24 +299,32 @@ function st(msg, tipo) {
 // ─── Tablas de conversión ─────────────────────────────────────────────────────
 
 // Tipo de cuenta RRHH → código TXT banco
+// ⚠ REGLA: cuenta de ahorro → CAT_CSH_CVIS (Cta. Vista)
+//   Itaú no acepta CAT_CSH_CINT para transferencias entre bancos.
+//   La cuenta de ahorro se trata como cuenta vista para garantizar
+//   compatibilidad con todos los bancos destino.
 function tipoCuentaCodigo(v) {
   if (!v) return '';
   const s = v.toString().trim().toLowerCase();
-  if (s.includes('corriente')) return 'CAT_CSH_CCTE';
-  if (s.includes('vista'))     return 'CAT_CSH_CVIS';
-  if (s.includes('ahorro'))    return 'CAT_CSH_CINT';
-  // Si ya viene el código correcto
-  if (v.toString().trim().startsWith('CAT_')) return v.toString().trim();
+  if (s.includes('corriente'))        return 'CAT_CSH_CCTE';
+  if (s.includes('vista'))            return 'CAT_CSH_CVIS';
+  // Cuenta ahorro → se convierte a Cta. Vista (evita rechazo en banco destino)
+  if (s.includes('ahorro'))           return 'CAT_CSH_CVIS';
+  // CAT_CSH_CINT (intereses/ahorro) que llegue del TXT anterior → también a vista
+  if (s === 'cat_csh_cint')           return 'CAT_CSH_CVIS';
+  // Si ya viene un código correcto de los dos válidos, respetarlo
+  if (s === 'cat_csh_ccte')           return 'CAT_CSH_CCTE';
+  if (s === 'cat_csh_cvis')           return 'CAT_CSH_CVIS';
   return '';
 }
 
 // Nombre legible para preview
 function tipoCuentaNombre(cod) {
-  const m = { 'CAT_CSH_CCTE':'Cta Corriente', 'CAT_CSH_CVIS':'Cta Vista', 'CAT_CSH_CINT':'Cta Intereses' };
+  const m = { 'CAT_CSH_CCTE':'Cta Corriente', 'CAT_CSH_CVIS':'Cta Vista' };
   return m[cod] || cod;
 }
 
-// Método de pago: el archivo de RRHH trae "Abono en Cuenta" → CAT_CSH_TRANSFER
+// Método de pago
 function metodoPago(v) {
   if (!v) return 'CAT_CSH_TRANSFER';
   const s = v.toString().trim().toLowerCase();
@@ -325,13 +335,11 @@ function metodoPago(v) {
   return 'CAT_CSH_TRANSFER';
 }
 
-// Código banco: si viene número usarlo; si es Itaú → 039
+// Código banco
 function codigoBanco(v) {
   if (!v && v !== 0) return '';
   const s = v.toString().trim();
-  // Si ya es numérico
   if (/^\d+$/.test(s)) return s.padStart(3, '0');
-  // Texto
   const t = s.toLowerCase();
   if (t.includes('itaú') || t.includes('itau')) return '039';
   if (t.includes('santander')) return '037';
@@ -362,11 +370,9 @@ function primeraFila(data) {
   return 0;
 }
 
-// Detectar si una fila es "totales" (col B vacía o col A dice "total", col C tiene monto)
 function esTotales(r) {
   const colA = (r[0] ?? '').toString().trim().toLowerCase();
   const colB = (r[1] ?? '').toString().trim();
-  // Si col A dice "total" o similar, o si col B (nombre) está vacía pero col C tiene número
   if (colA.includes('total') || colA.includes('suma')) return true;
   if (colB === '' && colA === '' && r[2] !== '' && r[2] !== undefined) return true;
   return false;
@@ -377,8 +383,7 @@ function leer(file) {
   if (!file) return;
   st('Leyendo archivo…', 'info');
   ['warnings','statsBox','prevWrap','txtPrev','genBtn'].forEach(id => {
-    const el = document.getElementById(id);
-    el.style.display = 'none';
+    document.getElementById(id).style.display = 'none';
   });
 
   const reader = new FileReader();
@@ -392,8 +397,6 @@ function leer(file) {
       let rows = data.slice(start).filter(r =>
         r.slice(0, 8).some(c => c !== null && c !== undefined && c.toString().trim() !== '')
       );
-
-      // Excluir fila de totales (normalmente la última)
       rows = rows.filter(r => !esTotales(r));
 
       if (rows.length === 0) {
@@ -401,8 +404,9 @@ function leer(file) {
         return;
       }
 
-      let fixCount = 0;
-      const warns  = [];
+      let fixCount   = 0;
+      let ahorroCount = 0;
+      const warns    = [];
 
       filas = rows.map((r, idx) => {
         const rut         = (r[0] ?? '').toString().trim();
@@ -418,20 +422,23 @@ function leer(file) {
         const numClean    = limpiarNum(numOrig);
         const email       = (r[7] ?? '').toString().trim();
 
-        // CodigoSucursal: '001' si banco es Itaú (039), sino vacío
         const sucursal = (codBancoFin === '039') ? '001' : '';
+
+        // Detectar si era ahorro/CINT (para avisar en warnings)
+        const eraAhorro = tipoRaw.toLowerCase().includes('ahorro') ||
+                          tipoRaw.toLowerCase() === 'cat_csh_cint';
 
         const fixed = (tipoRaw !== tipoCod || numOrig !== numClean || medioRaw !== medioFinal);
         if (fixed) fixCount++;
+        if (eraAhorro) ahorroCount++;
 
-        // Advertencias
         if (tipoRaw && !tipoCod) {
           warns.push(`Fila ${start + idx + 1}: tipo de cuenta no reconocido → "${tipoRaw}"`);
         }
-        if (!rut) warns.push(`Fila ${start + idx + 1}: RUT vacío`);
+        if (!rut)   warns.push(`Fila ${start + idx + 1}: RUT vacío`);
         if (!montoRaw || montoRaw === '0') warns.push(`Fila ${start + idx + 1}: monto cero o vacío`);
 
-        return { rut, nombre, email, medioPago: medioFinal, codBanco: codBancoFin, tipoCuenta: tipoCod, numCuenta: numClean, monto: montoRaw, sucursal, fixed };
+        return { rut, nombre, email, medioPago: medioFinal, codBanco: codBancoFin, tipoCuenta: tipoCod, numCuenta: numClean, monto: montoRaw, sucursal, fixed, eraAhorro };
       });
 
       const total = filas.reduce((s, r) => s + (parseInt(r.monto, 10) || 0), 0);
@@ -441,9 +448,14 @@ function leer(file) {
       document.getElementById('sFix').textContent   = fixCount;
       document.getElementById('statsBox').style.display = 'grid';
 
+      // Aviso específico para cuentas ahorro convertidas
+      if (ahorroCount > 0) {
+        warns.unshift(`ℹ ${ahorroCount} cuenta(s) de ahorro convertida(s) a Cta. Vista (CAT_CSH_CVIS) — compatible con todos los bancos`);
+      }
+
       if (warns.length) {
         const wEl = document.getElementById('warnings');
-        wEl.innerHTML = '⚠ Verificar:<br>' + warns.join('<br>');
+        wEl.innerHTML = warns.join('<br>');
         wEl.style.display = 'block';
       }
 
@@ -469,13 +481,16 @@ function renderPreview() {
 
   let html = '<thead><tr>' + hs.map(h => `<th>${h}</th>`).join('') + '</tr></thead><tbody>';
   filas.slice(0, 5).forEach(r => {
+    const tipoBadge = r.eraAhorro
+      ? `<span style="color:#f59e0b" title="Convertida desde Cta. Ahorro">Cta Vista ⚡</span>`
+      : tipoCuentaNombre(r.tipoCuenta);
     html += `<tr>
       <td>${r.rut}</td>
       <td title="${r.nombre}">${r.nombre}</td>
       <td>$${parseInt(r.monto||0).toLocaleString('es-CL')}</td>
       <td>${r.medioPago}</td>
       <td>${r.codBanco}</td>
-      <td>${tipoCuentaNombre(r.tipoCuenta)}</td>
+      <td>${tipoBadge}</td>
       <td>${r.numCuenta}</td>
       <td title="${r.email}">${r.email}</td>
       <td class="${r.fixed ? 'tag-fix' : 'tag-ok'}">${r.fixed ? '✎' : '✓'}</td>
@@ -489,7 +504,7 @@ function renderPreview() {
   wrap.style.display = 'block';
 }
 
-// ─── Vista previa TXT (primeras 2 líneas) ─────────────────────────────────────
+// ─── Vista previa TXT (primeras 3 líneas) ─────────────────────────────────────
 function renderTxtPreview() {
   const lines = construirTXT().split('\n').slice(0, 3);
   const el = document.getElementById('txtPrev');
@@ -509,44 +524,18 @@ function construirTXT() {
   const cantPagos  = filas.length;
   const montoTotal = filas.reduce((s, r) => s + (parseInt(r.monto, 10) || 0), 0);
 
-  // ── CABECERA ──
-  // Formato: RutEmpresa,ContRegistros,SumRegistros,TipoServicio,MedioRespaldo,CtaCargo,Descripcion,GlosaOrigen,GlosaDestino
   const cabecera = [
-    rutEmpresa,
-    cantPagos,
-    montoTotal,
-    tipoServ,
-    'CAT_CSH_CONTRACT_ACCOUNT',
-    cuentaCargo,
-    descripcion,
-    glosaOrig,
-    glosaDesc,
+    rutEmpresa, cantPagos, montoTotal, tipoServ,
+    'CAT_CSH_CONTRACT_ACCOUNT', cuentaCargo, descripcion, glosaOrig, glosaDesc,
   ].join(',');
 
-  // ── REGISTROS ──
-  // RutBenef, NombreBenef, Email, MetodoPago, CodBanco, TipoCuenta, NroCuenta,
-  // FechaPago(vacío), Ref1(vacío), Ref2(vacío), Monto,
-  // TipoCuentaCargo, NroCuentaCargo, CodigoSucursal,
-  // ReferenciaCliente(vacío), GlosaPago(vacío), GlosaOrigen, GlosaDestino
   const registros = filas.map(r => [
-    r.rut,
-    r.nombre,
-    r.email,
-    r.medioPago,
-    r.codBanco,
-    r.tipoCuenta,
-    r.numCuenta,
-    '',           // FechaDePago (en blanco)
-    '',           // Referencia1 (descontinuado)
-    '',           // Referencia2 (descontinuado)
+    r.rut, r.nombre, r.email, r.medioPago, r.codBanco, r.tipoCuenta, r.numCuenta,
+    '', '', '',       // FechaPago, Ref1, Ref2
     r.monto,
-    'CAT_CSH_CCTE',
-    cuentaCargo,
-    r.sucursal,
-    '',           // ReferenciaCliente
-    '',           // GlosaPago
-    glosaOrig,
-    glosaDesc,
+    'CAT_CSH_CCTE', cuentaCargo, r.sucursal,
+    '', '',           // ReferenciaCliente, GlosaPago
+    glosaOrig, glosaDesc,
   ].join(','));
 
   return [cabecera, ...registros].join('\n');
@@ -560,26 +549,21 @@ function generar() {
 
   try {
     const contenido = construirTXT();
-
-    const hoy  = new Date();
-    const dd   = String(hoy.getDate()).padStart(2,'0');
-    const mm   = String(hoy.getMonth()+1).padStart(2,'0');
-    const aaaa = hoy.getFullYear();
+    const hoy   = new Date();
+    const dd    = String(hoy.getDate()).padStart(2,'0');
+    const mm    = String(hoy.getMonth()+1).padStart(2,'0');
+    const aaaa  = hoy.getFullYear();
     const nombre = `nomina_itau_${dd}${mm}${aaaa}.txt`;
 
-    // Descargar
     const blob = new Blob([contenido], { type: 'text/plain;charset=utf-8' });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
-    a.href     = url;
-    a.download = nombre;
-    document.body.appendChild(a);
-    a.click();
+    a.href = url; a.download = nombre;
+    document.body.appendChild(a); a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
     st(`✅ Descargado: ${nombre} — listo para subir al portal Itaú`, 'ok');
-
   } catch(err) {
     st('Error generando el archivo: ' + err.message, 'err');
   }
