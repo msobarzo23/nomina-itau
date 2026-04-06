@@ -89,10 +89,8 @@
     appearance: none;
   }
   input[type=text]:focus, select:focus { border-color: var(--accent); }
-
   select option { background: #1a1b25; }
 
-  /* Drop zone */
   .drop {
     border: 2px dashed var(--border);
     border-radius: 10px;
@@ -108,7 +106,6 @@
   .drop-hint { font-size: 0.75rem; color: var(--muted); line-height: 1.6; }
   .drop-hint strong { color: var(--accent); display: block; font-size: 0.9rem; margin-bottom: 0.2rem; }
 
-  /* Status */
   .status { font-size: 0.72rem; padding: 0.55rem 0.9rem; border-radius: 8px; margin-top: 0.7rem; line-height: 1.5; display: none; }
   .status.info { display:block; background:rgba(245,166,35,.08); color:var(--accent); border:1px solid rgba(245,166,35,.25); }
   .status.ok   { display:block; background:rgba(34,197,94,.08);  color:var(--ok);    border:1px solid rgba(34,197,94,.25); }
@@ -116,13 +113,11 @@
 
   .warnings { margin-top: 0.6rem; font-size: 0.68rem; color: #f59e0b; line-height: 1.8; display: none; background: rgba(245,158,11,.06); border: 1px solid rgba(245,158,11,.2); border-radius: 8px; padding: 0.6rem 0.9rem; }
 
-  /* Stats */
   .stats { display: none; grid-template-columns: repeat(3,1fr); gap: 0.5rem; margin-top: 0.8rem; }
   .stat { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 0.6rem; text-align: center; }
   .stat-val { font-family: 'DM Serif Display', serif; font-size: 1.1rem; color: var(--accent); }
   .stat-lbl { font-size: 0.58rem; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-top: 0.1rem; }
 
-  /* Preview table */
   .prev-wrap { overflow-x: auto; margin-top: 0.9rem; border: 1px solid var(--border); border-radius: 8px; display: none; }
   table { width: 100%; border-collapse: collapse; font-size: 0.67rem; }
   th { background: #161828; color: var(--accent); padding: 0.45rem 0.6rem; text-align: left; font-size: 0.58rem; letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; }
@@ -131,7 +126,6 @@
   .tag-ok  { color: var(--ok); }
   .tag-fix { color: var(--accent); }
 
-  /* TXT preview */
   .txt-prev {
     background: var(--bg);
     border: 1px solid var(--border);
@@ -148,7 +142,6 @@
     overflow-y: auto;
   }
 
-  /* Button */
   .btn {
     display: none;
     width: 100%;
@@ -172,12 +165,10 @@
   footer { margin-top: 2rem; font-size: 0.62rem; color: var(--muted); text-align: center; letter-spacing: 1px; line-height: 2.2; }
   .pill { display:inline-block; background:rgba(245,166,35,.12); color:var(--accent); font-size:0.58rem; padding:.12rem .5rem; border-radius:20px; letter-spacing:1px; }
 
-  /* Info tooltip */
   .info-row { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.6rem; flex-wrap: wrap; }
   .info-tag { font-size: 0.6rem; color: var(--muted); background: rgba(255,255,255,.04); border: 1px solid var(--border); border-radius: 5px; padding: 0.2rem 0.5rem; }
   .info-tag span { color: var(--accent); }
-  .info-tag.warn-tag { border-color: rgba(245,158,11,.3); color: #f59e0b; }
-  .info-tag.warn-tag span { color: #fbbf24; }
+  .ver-tag { font-size: 0.58rem; background: rgba(34,197,94,.08); color: var(--ok); border: 1px solid rgba(34,197,94,.2); border-radius: 5px; padding: 0.2rem 0.6rem; margin-left: auto; }
 </style>
 </head>
 <body>
@@ -191,7 +182,6 @@
     </div>
   </header>
 
-  <!-- ── Config empresa ── -->
   <div class="card">
     <div class="card-title">⚙ Datos fijos de tu empresa</div>
     <div style="display:flex;flex-direction:column;gap:.7rem">
@@ -212,13 +202,17 @@
             <option value="006001">006001 – Pago de Sueldos</option>
             <option value="006002">006002 – Pago de Anticipos</option>
             <option value="006003">006003 – Pago de Honorarios</option>
-            <option value="005003">005003 – Pago de Proveedores</option>
-            <option value="007001">007001 – Transferencias TEF</option>
+            <option value="005003" selected>005003 – Pago de Proveedores</option>
+            <option value="006004">006004 – Pago de Gratificaciones</option>
+            <option value="006005">006005 – Pago de Comisiones</option>
+            <option value="006006">006006 – Pago de Premios</option>
+            <option value="006007">006007 – Pago de Aguinaldos</option>
+            <option value="007001">007001 – Transferencias</option>
           </select>
         </div>
         <div class="field">
           <label>Descripción cabecera</label>
-          <input type="text" id="descripcion" value="PAGO NOMINA" placeholder="Máx 40 caracteres">
+          <input type="text" id="descripcion" value="PAGO NOMINA" placeholder="Máx 20 caracteres">
         </div>
       </div>
       <div class="grid2">
@@ -233,13 +227,12 @@
       </div>
     </div>
     <div class="info-row">
-      <div class="info-tag">MedioRespaldo fijo: <span>CAT_CSH_CONTRACT_ACCOUNT</span></div>
-      <div class="info-tag">Cuenta cargo tipo: <span>CAT_CSH_CCTE</span></div>
-      <div class="info-tag warn-tag">Cta. Ahorro → <span>CAT_CSH_CVIS (auto)</span></div>
+      <div class="info-tag">MedioRespaldo cabecera: <span>CAT_CSH_CONTRACT_ACCOUNT</span></div>
+      <div class="info-tag">MedioRespaldo registro: <span>CAT_CSH_CCTE</span></div>
+      <div class="ver-tag">✓ Formato v.100924</div>
     </div>
   </div>
 
-  <!-- ── Upload ── -->
   <div class="card">
     <div class="card-title">📂 Archivo de Recursos Humanos</div>
 
@@ -249,7 +242,7 @@
       <div class="drop-hint">
         <strong>Toca para seleccionar el archivo de RRHH</strong>
         xlsx, xlsm, xls o csv · detecta automáticamente la fila de datos<br>
-        <small style="color:#3d3f5a;margin-top:.3rem;display:block">⚠ Fila de TOTALES al final será excluida automáticamente · Cuentas de ahorro se convierten a Cta. Vista</small>
+        <small style="color:#3d3f5a;margin-top:.3rem;display:block">Cta. Corriente → CCTE · Cta. Vista → CVIS · Cta. Ahorro → CAHO · Fila TOTALES excluida automáticamente</small>
       </div>
     </div>
 
@@ -273,13 +266,13 @@
 
   <footer>
     <span class="pill">📱 FUNCIONA EN IPHONE · SIN INSTALACIÓN</span><br>
-    Los datos nunca salen de tu dispositivo · formato oficial Itaú On-line
+    Los datos nunca salen de tu dispositivo · formato oficial Itaú Pagos Masivos En Línea v.100924
   </footer>
 
 </div>
 
 <script>
-// ─── Estado ──────────────────────────────────────────────────────────────────
+// ─── Estado ───────────────────────────────────────────────────────────────────
 let filas = [];
 
 // ─── Drag & drop ─────────────────────────────────────────────────────────────
@@ -289,42 +282,40 @@ drop.addEventListener('dragleave', () => drop.classList.remove('over'));
 drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); leer(e.dataTransfer.files[0]); });
 document.getElementById('fileIn').addEventListener('change', e => leer(e.target.files[0]));
 
-// ─── UI helpers ───────────────────────────────────────────────────────────────
 function st(msg, tipo) {
   const el = document.getElementById('status');
   el.textContent = msg;
   el.className = 'status ' + tipo;
 }
 
-// ─── Tablas de conversión ─────────────────────────────────────────────────────
-
-// Tipo de cuenta RRHH → código TXT banco
-// ⚠ REGLA: cuenta de ahorro → CAT_CSH_CVIS (Cta. Vista)
-//   Itaú no acepta CAT_CSH_CINT para transferencias entre bancos.
-//   La cuenta de ahorro se trata como cuenta vista para garantizar
-//   compatibilidad con todos los bancos destino.
+// ─── Tabla tipos de cuenta (formato v.100924) ─────────────────────────────────
+// CAT_CSH_CCTE = Cuenta corriente
+// CAT_CSH_CVIS = Cuenta vista
+// CAT_CSH_CAHO = Cuenta ahorro  ← NUEVO en v.100924
 function tipoCuentaCodigo(v) {
   if (!v) return '';
   const s = v.toString().trim().toLowerCase();
-  if (s.includes('corriente'))        return 'CAT_CSH_CCTE';
-  if (s.includes('vista'))            return 'CAT_CSH_CVIS';
-  // Cuenta ahorro → se convierte a Cta. Vista (evita rechazo en banco destino)
-  if (s.includes('ahorro'))           return 'CAT_CSH_CVIS';
-  // CAT_CSH_CINT (intereses/ahorro) que llegue del TXT anterior → también a vista
-  if (s === 'cat_csh_cint')           return 'CAT_CSH_CVIS';
-  // Si ya viene un código correcto de los dos válidos, respetarlo
-  if (s === 'cat_csh_ccte')           return 'CAT_CSH_CCTE';
-  if (s === 'cat_csh_cvis')           return 'CAT_CSH_CVIS';
+  if (s.includes('corriente'))          return 'CAT_CSH_CCTE';
+  if (s.includes('vista'))              return 'CAT_CSH_CVIS';
+  if (s.includes('ahorro'))             return 'CAT_CSH_CAHO';
+  // Códigos que ya vienen formateados
+  if (s === 'cat_csh_ccte')             return 'CAT_CSH_CCTE';
+  if (s === 'cat_csh_cvis')             return 'CAT_CSH_CVIS';
+  if (s === 'cat_csh_caho')             return 'CAT_CSH_CAHO';
+  // Código legacy CINT → ahorro
+  if (s === 'cat_csh_cint')             return 'CAT_CSH_CAHO';
   return '';
 }
 
-// Nombre legible para preview
 function tipoCuentaNombre(cod) {
-  const m = { 'CAT_CSH_CCTE':'Cta Corriente', 'CAT_CSH_CVIS':'Cta Vista' };
+  const m = {
+    'CAT_CSH_CCTE': 'Cta Corriente',
+    'CAT_CSH_CVIS': 'Cta Vista',
+    'CAT_CSH_CAHO': 'Cta Ahorro',
+  };
   return m[cod] || cod;
 }
 
-// Método de pago
 function metodoPago(v) {
   if (!v) return 'CAT_CSH_TRANSFER';
   const s = v.toString().trim().toLowerCase();
@@ -335,17 +326,24 @@ function metodoPago(v) {
   return 'CAT_CSH_TRANSFER';
 }
 
-// Código banco
+// Código banco — sin padding (formato nuevo usa códigos sin ceros a la izquierda)
 function codigoBanco(v) {
   if (!v && v !== 0) return '';
   const s = v.toString().trim();
-  if (/^\d+$/.test(s)) return s.padStart(3, '0');
+  // Si viene numérico, quitar ceros a la izquierda (el banco los acepta sin padding)
+  if (/^\d+$/.test(s)) return String(parseInt(s, 10));
   const t = s.toLowerCase();
-  if (t.includes('itaú') || t.includes('itau')) return '039';
-  if (t.includes('santander')) return '037';
-  if (t.includes('estado'))    return '012';
-  if (t.includes('chile'))     return '001';
-  if (t.includes('bci') || t.includes('credito')) return '016';
+  if (t.includes('itaú') || t.includes('itau') || t.includes('corpbanca')) return '39';
+  if (t.includes('santander')) return '37';
+  if (t.includes('estado'))    return '12';
+  if (t.includes('chile'))     return '1';
+  if (t.includes('bci') || t.includes('credito')) return '16';
+  if (t.includes('scotiabank')) return '14';
+  if (t.includes('security'))   return '49';
+  if (t.includes('falabella'))  return '51';
+  if (t.includes('ripley'))     return '53';
+  if (t.includes('consorcio'))  return '55';
+  if (t.includes('coopeuch'))   return '672';
   return s;
 }
 
@@ -360,7 +358,6 @@ function limpiarMonto(v) {
   return v.toString().trim().replace(/\./g, '').replace(/,/g, '').replace(/[^\d]/g, '');
 }
 
-// ─── Detectar primera fila con datos reales ───────────────────────────────────
 function primeraFila(data) {
   for (let i = 0; i < data.length; i++) {
     const r = data[i];
@@ -404,9 +401,14 @@ function leer(file) {
         return;
       }
 
-      let fixCount   = 0;
-      let ahorroCount = 0;
-      const warns    = [];
+      // Advertencia si supera límite de 195 registros del formato
+      if (rows.length > 195) {
+        st(`⚠ El archivo tiene ${rows.length} registros. El formato permite máximo 195 por archivo.`, 'err');
+        return;
+      }
+
+      let fixCount = 0;
+      const warns  = [];
 
       filas = rows.map((r, idx) => {
         const rut         = (r[0] ?? '').toString().trim();
@@ -422,15 +424,11 @@ function leer(file) {
         const numClean    = limpiarNum(numOrig);
         const email       = (r[7] ?? '').toString().trim();
 
-        const sucursal = (codBancoFin === '039') ? '001' : '';
-
-        // Detectar si era ahorro/CINT (para avisar en warnings)
-        const eraAhorro = tipoRaw.toLowerCase().includes('ahorro') ||
-                          tipoRaw.toLowerCase() === 'cat_csh_cint';
+        // Código Sucursal: EN BLANCO según formato v.100924
+        const sucursal = '';
 
         const fixed = (tipoRaw !== tipoCod || numOrig !== numClean || medioRaw !== medioFinal);
         if (fixed) fixCount++;
-        if (eraAhorro) ahorroCount++;
 
         if (tipoRaw && !tipoCod) {
           warns.push(`Fila ${start + idx + 1}: tipo de cuenta no reconocido → "${tipoRaw}"`);
@@ -438,7 +436,7 @@ function leer(file) {
         if (!rut)   warns.push(`Fila ${start + idx + 1}: RUT vacío`);
         if (!montoRaw || montoRaw === '0') warns.push(`Fila ${start + idx + 1}: monto cero o vacío`);
 
-        return { rut, nombre, email, medioPago: medioFinal, codBanco: codBancoFin, tipoCuenta: tipoCod, numCuenta: numClean, monto: montoRaw, sucursal, fixed, eraAhorro };
+        return { rut, nombre, email, medioPago: medioFinal, codBanco: codBancoFin, tipoCuenta: tipoCod, numCuenta: numClean, monto: montoRaw, sucursal, fixed };
       });
 
       const total = filas.reduce((s, r) => s + (parseInt(r.monto, 10) || 0), 0);
@@ -447,11 +445,6 @@ function leer(file) {
       document.getElementById('sTotal').textContent = '$' + total.toLocaleString('es-CL');
       document.getElementById('sFix').textContent   = fixCount;
       document.getElementById('statsBox').style.display = 'grid';
-
-      // Aviso específico para cuentas ahorro convertidas
-      if (ahorroCount > 0) {
-        warns.unshift(`ℹ ${ahorroCount} cuenta(s) de ahorro convertida(s) a Cta. Vista (CAT_CSH_CVIS) — compatible con todos los bancos`);
-      }
 
       if (warns.length) {
         const wEl = document.getElementById('warnings');
@@ -473,24 +466,21 @@ function leer(file) {
   reader.readAsArrayBuffer(file);
 }
 
-// ─── Vista previa tabla ───────────────────────────────────────────────────────
+// ─── Preview tabla ────────────────────────────────────────────────────────────
 function renderPreview() {
   const wrap = document.getElementById('prevWrap');
   const tbl  = document.getElementById('prevTable');
-  const hs   = ['RUT','Nombre','Monto','Método Pago','Banco','Tipo Cta (banco)','N° Cuenta','Email',''];
+  const hs   = ['RUT','Nombre','Monto','Método','Banco','Tipo Cta','N° Cuenta','Email',''];
 
   let html = '<thead><tr>' + hs.map(h => `<th>${h}</th>`).join('') + '</tr></thead><tbody>';
   filas.slice(0, 5).forEach(r => {
-    const tipoBadge = r.eraAhorro
-      ? `<span style="color:#f59e0b" title="Convertida desde Cta. Ahorro">Cta Vista ⚡</span>`
-      : tipoCuentaNombre(r.tipoCuenta);
     html += `<tr>
       <td>${r.rut}</td>
       <td title="${r.nombre}">${r.nombre}</td>
       <td>$${parseInt(r.monto||0).toLocaleString('es-CL')}</td>
       <td>${r.medioPago}</td>
       <td>${r.codBanco}</td>
-      <td>${tipoBadge}</td>
+      <td>${tipoCuentaNombre(r.tipoCuenta)}</td>
       <td>${r.numCuenta}</td>
       <td title="${r.email}">${r.email}</td>
       <td class="${r.fixed ? 'tag-fix' : 'tag-ok'}">${r.fixed ? '✎' : '✓'}</td>
@@ -504,7 +494,6 @@ function renderPreview() {
   wrap.style.display = 'block';
 }
 
-// ─── Vista previa TXT (primeras 3 líneas) ─────────────────────────────────────
 function renderTxtPreview() {
   const lines = construirTXT().split('\n').slice(0, 3);
   const el = document.getElementById('txtPrev');
@@ -512,36 +501,67 @@ function renderTxtPreview() {
   el.style.display = 'block';
 }
 
-// ─── Construir contenido TXT ──────────────────────────────────────────────────
+// ─── Construir TXT (formato v.100924) ─────────────────────────────────────────
 function construirTXT() {
   const rutEmpresa  = document.getElementById('rutEmpresa').value.trim()   || '883971000';
   const cuentaCargo = document.getElementById('cuentaCargo').value.trim()  || '206388064';
   const tipoServ    = document.getElementById('tipoServicio').value;
-  const descripcion = (document.getElementById('descripcion').value.trim() || 'PAGO NOMINA').substring(0, 40);
+  const descripcion = (document.getElementById('descripcion').value.trim() || 'PAGO NOMINA').substring(0, 20);
   const glosaOrig   = (document.getElementById('glosaOrig').value.trim()   || 'nomina').substring(0, 20);
   const glosaDesc   = (document.getElementById('glosaDesc').value.trim()   || 'nomina').substring(0, 20);
 
   const cantPagos  = filas.length;
   const montoTotal = filas.reduce((s, r) => s + (parseInt(r.monto, 10) || 0), 0);
 
+  // CABECERA
+  // RutEmpresa, CantidadRegistros, SumaRegistros, TipoServicio,
+  // MedioRespaldo, CuentaCargo, Descripcion, GlosaCuentaCargo, GlosaCuentaAbono
   const cabecera = [
-    rutEmpresa, cantPagos, montoTotal, tipoServ,
-    'CAT_CSH_CONTRACT_ACCOUNT', cuentaCargo, descripcion, glosaOrig, glosaDesc,
+    rutEmpresa,
+    cantPagos,
+    montoTotal,
+    tipoServ,
+    'CAT_CSH_CONTRACT_ACCOUNT',
+    cuentaCargo,
+    descripcion,
+    glosaOrig,
+    glosaDesc,
   ].join(',');
 
+  // REGISTROS
+  // RutBenef, NombreBenef, EmailBenef, MetodoPago, CodBancoAbono,
+  // TipoCuentaAbono, NroCuentaAbono,
+  // FechaPago(vacío), Referencia1(vacío), Referencia2(vacío),
+  // MontoPago,
+  // MedioRespaldo(CAT_CSH_CCTE), NroMedioRespaldo,
+  // CodigoSucursal(vacío),
+  // ReferenciaCliente(vacío), DetallePago(vacío),
+  // GlosaCuentaOrigen, GlosaCuentaDestino
   const registros = filas.map(r => [
-    r.rut, r.nombre, r.email, r.medioPago, r.codBanco, r.tipoCuenta, r.numCuenta,
-    '', '', '',       // FechaPago, Ref1, Ref2
+    r.rut,
+    r.nombre,
+    r.email,
+    r.medioPago,
+    r.codBanco,
+    r.tipoCuenta,
+    r.numCuenta,
+    '',             // FechaPago — sin uso
+    '',             // Referencia1 — sin uso
+    '',             // Referencia2 — sin uso
     r.monto,
-    'CAT_CSH_CCTE', cuentaCargo, r.sucursal,
-    '', '',           // ReferenciaCliente, GlosaPago
-    glosaOrig, glosaDesc,
+    'CAT_CSH_CCTE', // MedioRespaldo registro (v.100924: CAT_CSH_CCTE, no CONTRACT_ACCOUNT)
+    cuentaCargo,    // NroMedioRespaldo
+    '',             // CodigoSucursal — EN BLANCO según v.100924
+    '',             // ReferenciaCliente
+    '',             // DetallePago
+    glosaOrig,
+    glosaDesc,
   ].join(','));
 
   return [cabecera, ...registros].join('\n');
 }
 
-// ─── Generar y descargar TXT ──────────────────────────────────────────────────
+// ─── Generar y descargar ──────────────────────────────────────────────────────
 function generar() {
   const btn = document.getElementById('genBtn');
   btn.disabled = true;
@@ -549,10 +569,10 @@ function generar() {
 
   try {
     const contenido = construirTXT();
-    const hoy   = new Date();
-    const dd    = String(hoy.getDate()).padStart(2,'0');
-    const mm    = String(hoy.getMonth()+1).padStart(2,'0');
-    const aaaa  = hoy.getFullYear();
+    const hoy  = new Date();
+    const dd   = String(hoy.getDate()).padStart(2,'0');
+    const mm   = String(hoy.getMonth()+1).padStart(2,'0');
+    const aaaa = hoy.getFullYear();
     const nombre = `nomina_itau_${dd}${mm}${aaaa}.txt`;
 
     const blob = new Blob([contenido], { type: 'text/plain;charset=utf-8' });
