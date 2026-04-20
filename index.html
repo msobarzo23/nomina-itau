@@ -7,7 +7,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Mono:wght@400;500&display=swap');
-
   :root {
     --bg:      #0b0c10;
     --surface: #13141a;
@@ -19,9 +18,7 @@
     --ok:      #22c55e;
     --err:     #ef4444;
   }
-
   * { box-sizing: border-box; margin: 0; padding: 0; }
-
   body {
     background: var(--bg);
     color: var(--text);
@@ -32,11 +29,8 @@
     flex-direction: column;
     align-items: center;
   }
-
   .wrap { max-width: 620px; width: 100%; }
-
   header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.8rem; }
-
   .badge {
     background: var(--blue);
     color: var(--accent);
@@ -47,12 +41,9 @@
     letter-spacing: 1px;
     flex-shrink: 0;
   }
-
   h1 { font-family: 'DM Serif Display', serif; font-size: 1.45rem; line-height: 1.2; }
   h1 em { color: var(--accent); font-style: normal; }
-
   .subtitle { font-size: 0.68rem; color: var(--muted); margin-top: 0.2rem; letter-spacing: .5px; }
-
   .card {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -60,7 +51,6 @@
     padding: 1.3rem;
     margin-bottom: 0.9rem;
   }
-
   .card-title {
     font-size: 0.6rem;
     letter-spacing: 2px;
@@ -68,12 +58,9 @@
     text-transform: uppercase;
     margin-bottom: 1rem;
   }
-
   .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; }
   .field { display: flex; flex-direction: column; gap: 0.25rem; }
-
   label { font-size: 0.62rem; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; }
-
   input[type=text], select {
     background: var(--bg);
     border: 1px solid var(--border);
@@ -90,7 +77,6 @@
   }
   input[type=text]:focus, select:focus { border-color: var(--accent); }
   select option { background: #1a1b25; }
-
   .drop {
     border: 2px dashed var(--border);
     border-radius: 10px;
@@ -105,19 +91,15 @@
   .drop-icon { font-size: 1.8rem; display: block; margin-bottom: 0.6rem; }
   .drop-hint { font-size: 0.75rem; color: var(--muted); line-height: 1.6; }
   .drop-hint strong { color: var(--accent); display: block; font-size: 0.9rem; margin-bottom: 0.2rem; }
-
   .status { font-size: 0.72rem; padding: 0.55rem 0.9rem; border-radius: 8px; margin-top: 0.7rem; line-height: 1.5; display: none; }
   .status.info { display:block; background:rgba(245,166,35,.08); color:var(--accent); border:1px solid rgba(245,166,35,.25); }
   .status.ok   { display:block; background:rgba(34,197,94,.08);  color:var(--ok);    border:1px solid rgba(34,197,94,.25); }
   .status.err  { display:block; background:rgba(239,68,68,.08);  color:var(--err);   border:1px solid rgba(239,68,68,.25); }
-
   .warnings { margin-top: 0.6rem; font-size: 0.68rem; color: #f59e0b; line-height: 1.8; display: none; background: rgba(245,158,11,.06); border: 1px solid rgba(245,158,11,.2); border-radius: 8px; padding: 0.6rem 0.9rem; }
-
   .stats { display: none; grid-template-columns: repeat(3,1fr); gap: 0.5rem; margin-top: 0.8rem; }
   .stat { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 0.6rem; text-align: center; }
   .stat-val { font-family: 'DM Serif Display', serif; font-size: 1.1rem; color: var(--accent); }
   .stat-lbl { font-size: 0.58rem; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-top: 0.1rem; }
-
   .prev-wrap { overflow-x: auto; margin-top: 0.9rem; border: 1px solid var(--border); border-radius: 8px; display: none; }
   table { width: 100%; border-collapse: collapse; font-size: 0.67rem; }
   th { background: #161828; color: var(--accent); padding: 0.45rem 0.6rem; text-align: left; font-size: 0.58rem; letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; }
@@ -125,7 +107,6 @@
   tr:hover td { background: rgba(255,255,255,.02); }
   .tag-ok  { color: var(--ok); }
   .tag-fix { color: var(--accent); }
-
   .txt-prev {
     background: var(--bg);
     border: 1px solid var(--border);
@@ -141,7 +122,6 @@
     max-height: 140px;
     overflow-y: auto;
   }
-
   .btn {
     display: none;
     width: 100%;
@@ -161,10 +141,8 @@
   }
   .btn:hover:not(:disabled) { background: #ffc040; transform: translateY(-1px); }
   .btn:disabled { opacity: .4; cursor: not-allowed; }
-
   footer { margin-top: 2rem; font-size: 0.62rem; color: var(--muted); text-align: center; letter-spacing: 1px; line-height: 2.2; }
   .pill { display:inline-block; background:rgba(245,166,35,.12); color:var(--accent); font-size:0.58rem; padding:.12rem .5rem; border-radius:20px; letter-spacing:1px; }
-
   .info-row { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.6rem; flex-wrap: wrap; }
   .info-tag { font-size: 0.6rem; color: var(--muted); background: rgba(255,255,255,.04); border: 1px solid var(--border); border-radius: 5px; padding: 0.2rem 0.5rem; }
   .info-tag span { color: var(--accent); }
@@ -242,7 +220,7 @@
       <div class="drop-hint">
         <strong>Toca para seleccionar el archivo de RRHH</strong>
         xlsx, xlsm, xls o csv · detecta automáticamente la fila de datos<br>
-        <small style="color:#3d3f5a;margin-top:.3rem;display:block">Cta. Corriente → CCTE · Cta. Vista → CVIS · Cta. Ahorro → CAHO · Fila TOTALES excluida automáticamente</small>
+        <small style="color:#3d3f5a;margin-top:.3rem;display:block">Cta. Corriente → CCTE · Cta. Vista → CVIS · Cta. Ahorro → CAHO · Fila TOTALES y encabezados excluidos automáticamente</small>
       </div>
     </div>
 
@@ -272,10 +250,8 @@
 </div>
 
 <script>
-// ─── Estado ───────────────────────────────────────────────────────────────────
 let filas = [];
 
-// ─── Drag & drop ─────────────────────────────────────────────────────────────
 const drop = document.getElementById('drop');
 drop.addEventListener('dragover',  e => { e.preventDefault(); drop.classList.add('over'); });
 drop.addEventListener('dragleave', () => drop.classList.remove('over'));
@@ -288,22 +264,16 @@ function st(msg, tipo) {
   el.className = 'status ' + tipo;
 }
 
-// ─── Tabla tipos de cuenta (formato v.100924) ─────────────────────────────────
-// CAT_CSH_CCTE = Cuenta corriente
-// CAT_CSH_CVIS = Cuenta vista
-// CAT_CSH_CAHO = Cuenta ahorro  ← NUEVO en v.100924
 function tipoCuentaCodigo(v) {
   if (!v) return '';
   const s = v.toString().trim().toLowerCase();
-  if (s.includes('corriente'))          return 'CAT_CSH_CCTE';
-  if (s.includes('vista'))              return 'CAT_CSH_CVIS';
-  if (s.includes('ahorro'))             return 'CAT_CSH_CAHO';
-  // Códigos que ya vienen formateados
-  if (s === 'cat_csh_ccte')             return 'CAT_CSH_CCTE';
-  if (s === 'cat_csh_cvis')             return 'CAT_CSH_CVIS';
-  if (s === 'cat_csh_caho')             return 'CAT_CSH_CAHO';
-  // Código legacy CINT → ahorro
-  if (s === 'cat_csh_cint')             return 'CAT_CSH_CAHO';
+  if (s.includes('corriente'))  return 'CAT_CSH_CCTE';
+  if (s.includes('vista'))      return 'CAT_CSH_CVIS';
+  if (s.includes('ahorro'))     return 'CAT_CSH_CAHO';
+  if (s === 'cat_csh_ccte')     return 'CAT_CSH_CCTE';
+  if (s === 'cat_csh_cvis')     return 'CAT_CSH_CVIS';
+  if (s === 'cat_csh_caho')     return 'CAT_CSH_CAHO';
+  if (s === 'cat_csh_cint')     return 'CAT_CSH_CAHO';
   return '';
 }
 
@@ -326,11 +296,9 @@ function metodoPago(v) {
   return 'CAT_CSH_TRANSFER';
 }
 
-// Código banco — sin padding (formato nuevo usa códigos sin ceros a la izquierda)
 function codigoBanco(v) {
   if (!v && v !== 0) return '';
   const s = v.toString().trim();
-  // Si viene numérico, quitar ceros a la izquierda (el banco los acepta sin padding)
   if (/^\d+$/.test(s)) return String(parseInt(s, 10));
   const t = s.toLowerCase();
   if (t.includes('itaú') || t.includes('itau') || t.includes('corpbanca')) return '39';
@@ -347,6 +315,7 @@ function codigoBanco(v) {
   return s;
 }
 
+// ── FIX 1: limpiarNum limpia puntos, guiones y espacios ──────────────────────
 function limpiarNum(v) {
   if (v === null || v === undefined) return '';
   return v.toString().replace(/[\s.\-]/g, '');
@@ -375,7 +344,25 @@ function esTotales(r) {
   return false;
 }
 
-// ─── Leer archivo ─────────────────────────────────────────────────────────────
+// ── FIX 2: detecta filas de encabezado ───────────────────────────────────────
+function esEncabezado(r) {
+  const c0 = (r[0] ?? '').toString().trim().toLowerCase().replace(/[.\-\s]/g, '');
+  const c1 = (r[1] ?? '').toString().trim().toLowerCase();
+  // Si la columna 0 parece un título de columna (no un RUT numérico)
+  const palabrasClave = ['rut', 'run', 'nombre', 'rutbenef', 'rutbeneficiario', 'ruttrabajador', 'cedula', 'nro'];
+  for (const p of palabrasClave) {
+    if (c0 === p || c1 === p) return true;
+  }
+  // También excluir si la columna 0 tiene letras y no parece un RUT (RUT válido: dígitos + posible K al final)
+  const c0raw = (r[0] ?? '').toString().trim();
+  if (c0raw && !/^\d{6,9}[-]?[\dkK]?$/.test(c0raw.replace(/\./g, ''))) {
+    // Si tiene puros textos como "RUT", "Nombre", etc.
+    if (/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(c0raw) && c0raw.length > 2) return true;
+  }
+  return false;
+}
+
+// ── Leer archivo ─────────────────────────────────────────────────────────────
 function leer(file) {
   if (!file) return;
   st('Leyendo archivo…', 'info');
@@ -396,12 +383,14 @@ function leer(file) {
       );
       rows = rows.filter(r => !esTotales(r));
 
+      // ── FIX 2 aplicado: filtrar encabezados ───────────────────────────────
+      rows = rows.filter(r => !esEncabezado(r));
+
       if (rows.length === 0) {
         st('No se encontraron datos. Revisa el archivo.', 'err');
         return;
       }
 
-      // Advertencia si supera límite de 195 registros del formato
       if (rows.length > 195) {
         st(`⚠ El archivo tiene ${rows.length} registros. El formato permite máximo 195 por archivo.`, 'err');
         return;
@@ -411,8 +400,15 @@ function leer(file) {
       const warns  = [];
 
       filas = rows.map((r, idx) => {
-        const rut         = (r[0] ?? '').toString().trim();
-        const nombre      = (r[1] ?? '').toString().trim();
+
+        // ── FIX 1: RUT pasa por limpiarNum para eliminar guiones y puntos ───
+        const rutRaw      = (r[0] ?? '').toString().trim();
+        const rut         = limpiarNum(rutRaw);
+
+        // ── FIX 3: nombre sin comas (evita corrupción de columnas en TXT) ───
+        const nombreRaw   = (r[1] ?? '').toString().trim();
+        const nombre      = nombreRaw.replace(/,/g, ' ').replace(/\s{2,}/g, ' ');
+
         const montoRaw    = limpiarMonto(r[2]);
         const medioRaw    = (r[3] ?? '').toString().trim();
         const medioFinal  = metodoPago(medioRaw);
@@ -424,17 +420,32 @@ function leer(file) {
         const numClean    = limpiarNum(numOrig);
         const email       = (r[7] ?? '').toString().trim();
 
-        // Código Sucursal: EN BLANCO según formato v.100924
         const sucursal = '';
 
-        const fixed = (tipoRaw !== tipoCod || numOrig !== numClean || medioRaw !== medioFinal);
+        // Detectar si hubo correcciones (incluye RUT con guión y nombre con coma)
+        const fixed = (
+          tipoRaw !== tipoCod ||
+          numOrig !== numClean ||
+          medioRaw !== medioFinal ||
+          rutRaw !== rut ||
+          nombreRaw !== nombre
+        );
         if (fixed) fixCount++;
 
         if (tipoRaw && !tipoCod) {
           warns.push(`Fila ${start + idx + 1}: tipo de cuenta no reconocido → "${tipoRaw}"`);
         }
-        if (!rut)   warns.push(`Fila ${start + idx + 1}: RUT vacío`);
+        if (!rut) warns.push(`Fila ${start + idx + 1}: RUT vacío`);
         if (!montoRaw || montoRaw === '0') warns.push(`Fila ${start + idx + 1}: monto cero o vacío`);
+
+        // Advertir si el nombre tenía comas (se reemplazaron por espacio)
+        if (nombreRaw.includes(',')) {
+          warns.push(`Fila ${start + idx + 1}: nombre con coma corregido → "${nombre}"`);
+        }
+        // Advertir si el RUT tenía guión o punto
+        if (rutRaw !== rut && rut.length > 0) {
+          warns.push(`Fila ${start + idx + 1}: RUT limpiado → "${rut}"`);
+        }
 
         return { rut, nombre, email, medioPago: medioFinal, codBanco: codBancoFin, tipoCuenta: tipoCod, numCuenta: numClean, monto: montoRaw, sucursal, fixed };
       });
@@ -466,7 +477,7 @@ function leer(file) {
   reader.readAsArrayBuffer(file);
 }
 
-// ─── Preview tabla ────────────────────────────────────────────────────────────
+// ── Preview tabla ─────────────────────────────────────────────────────────────
 function renderPreview() {
   const wrap = document.getElementById('prevWrap');
   const tbl  = document.getElementById('prevTable');
@@ -501,7 +512,7 @@ function renderTxtPreview() {
   el.style.display = 'block';
 }
 
-// ─── Construir TXT (formato v.100924) ─────────────────────────────────────────
+// ── Construir TXT (formato v.100924) ─────────────────────────────────────────
 function construirTXT() {
   const rutEmpresa  = document.getElementById('rutEmpresa').value.trim()   || '883971000';
   const cuentaCargo = document.getElementById('cuentaCargo').value.trim()  || '206388064';
@@ -513,9 +524,6 @@ function construirTXT() {
   const cantPagos  = filas.length;
   const montoTotal = filas.reduce((s, r) => s + (parseInt(r.monto, 10) || 0), 0);
 
-  // CABECERA
-  // RutEmpresa, CantidadRegistros, SumaRegistros, TipoServicio,
-  // MedioRespaldo, CuentaCargo, Descripcion, GlosaCuentaCargo, GlosaCuentaAbono
   const cabecera = [
     rutEmpresa,
     cantPagos,
@@ -528,15 +536,6 @@ function construirTXT() {
     glosaDesc,
   ].join(',');
 
-  // REGISTROS
-  // RutBenef, NombreBenef, EmailBenef, MetodoPago, CodBancoAbono,
-  // TipoCuentaAbono, NroCuentaAbono,
-  // FechaPago(vacío), Referencia1(vacío), Referencia2(vacío),
-  // MontoPago,
-  // MedioRespaldo(CAT_CSH_CCTE), NroMedioRespaldo,
-  // CodigoSucursal(vacío),
-  // ReferenciaCliente(vacío), DetallePago(vacío),
-  // GlosaCuentaOrigen, GlosaCuentaDestino
   const registros = filas.map(r => [
     r.rut,
     r.nombre,
@@ -545,15 +544,15 @@ function construirTXT() {
     r.codBanco,
     r.tipoCuenta,
     r.numCuenta,
-    '',             // FechaPago — sin uso
-    '',             // Referencia1 — sin uso
-    '',             // Referencia2 — sin uso
+    '',
+    '',
+    '',
     r.monto,
-    'CAT_CSH_CCTE', // MedioRespaldo registro (v.100924: CAT_CSH_CCTE, no CONTRACT_ACCOUNT)
-    cuentaCargo,    // NroMedioRespaldo
-    '',             // CodigoSucursal — EN BLANCO según v.100924
-    '',             // ReferenciaCliente
-    '',             // DetallePago
+    'CAT_CSH_CCTE',
+    cuentaCargo,
+    '',
+    '',
+    '',
     glosaOrig,
     glosaDesc,
   ].join(','));
@@ -561,7 +560,7 @@ function construirTXT() {
   return [cabecera, ...registros].join('\n');
 }
 
-// ─── Generar y descargar ──────────────────────────────────────────────────────
+// ── Generar y descargar ───────────────────────────────────────────────────────
 function generar() {
   const btn = document.getElementById('genBtn');
   btn.disabled = true;
