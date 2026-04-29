@@ -504,7 +504,23 @@
 
 <script>
 const EMAIL_FIJO = 'finanzas@transportesbello.com';
+// Tope por transferencia Itaú: montos superiores se dividen en líneas múltiples
+const LIMITE_TRANSF = 7000000;
 let proveedores = [];
+
+function dividirEnLineas(prov, monto, glosa) {
+  if (monto <= LIMITE_TRANSF) return [{ ...prov, monto, glosa }];
+  const total = Math.ceil(monto / LIMITE_TRANSF);
+  const lineas = [];
+  let restante = monto;
+  for (let n = 1; restante > 0; n++) {
+    const parcial = Math.min(restante, LIMITE_TRANSF);
+    const g = glosa ? `${glosa} (${n}/${total})` : `Línea ${n} de ${total}`;
+    lineas.push({ ...prov, monto: parcial, glosa: g });
+    restante -= parcial;
+  }
+  return lineas;
+}
 
 // Mostrar/ocultar campos según método de pago
 document.getElementById('pMetodo').addEventListener('change', function() {
@@ -544,11 +560,17 @@ function agregarProveedor() {
   if (!monto || monto <= 0) return toast('⚠ Ingresa un monto válido', true);
   if (metodo === 'CAT_CSH_TRANSFER' && !nroCuenta) return toast('⚠ Ingresa el N° de cuenta para transferencia', true);
 
-  proveedores.push({ rut, nombre, monto, metodo, banco, tipoCuenta, nroCuenta, glosa });
+  const base = { rut, nombre, metodo, banco, tipoCuenta, nroCuenta };
+  const lineas = dividirEnLineas(base, monto, glosa);
+  lineas.forEach(l => proveedores.push(l));
   limpiarForm();
   renderTabla();
   actualizarPreview();
-  toast(`✓ ${nombre} agregado`);
+  if (lineas.length > 1) {
+    toast(`✓ ${nombre} — dividido en ${lineas.length} líneas de hasta $${fmtMonto(LIMITE_TRANSF)}`);
+  } else {
+    toast(`✓ ${nombre} agregado`);
+  }
 }
 
 function limpiarForm() {

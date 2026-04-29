@@ -252,6 +252,9 @@
 <script>
 let filas = [];
 
+// Tope por transferencia Itaú: montos superiores se dividen en líneas múltiples
+const LIMITE_TRANSF = 7000000;
+
 const drop = document.getElementById('drop');
 drop.addEventListener('dragover',  e => { e.preventDefault(); drop.classList.add('over'); });
 drop.addEventListener('dragleave', () => drop.classList.remove('over'));
@@ -396,10 +399,9 @@ function leer(file) {
         return;
       }
 
-      let fixCount = 0;
       const warns  = [];
 
-      filas = rows.map((r, idx) => {
+      filas = rows.flatMap((r, idx) => {
 
         // ── FIX 1: RUT pasa por limpiarNum para eliminar guiones y puntos ───
         const rutRaw      = (r[0] ?? '').toString().trim();
@@ -430,7 +432,6 @@ function leer(file) {
           rutRaw !== rut ||
           nombreRaw !== nombre
         );
-        if (fixed) fixCount++;
 
         if (tipoRaw && !tipoCod) {
           warns.push(`Fila ${start + idx + 1}: tipo de cuenta no reconocido → "${tipoRaw}"`);
@@ -447,8 +448,32 @@ function leer(file) {
           warns.push(`Fila ${start + idx + 1}: RUT limpiado → "${rut}"`);
         }
 
-        return { rut, nombre, email, medioPago: medioFinal, codBanco: codBancoFin, tipoCuenta: tipoCod, numCuenta: numClean, monto: montoRaw, sucursal, fixed };
+        const base = { rut, nombre, email, medioPago: medioFinal, codBanco: codBancoFin, tipoCuenta: tipoCod, numCuenta: numClean, monto: montoRaw, sucursal, fixed };
+
+        // ── FIX 4: montos > $7.000.000 se dividen (tope por transferencia Itaú) ─
+        const montoNum = parseInt(montoRaw, 10) || 0;
+        if (montoNum > LIMITE_TRANSF) {
+          const totalPartes = Math.ceil(montoNum / LIMITE_TRANSF);
+          const partes = [];
+          let restante = montoNum;
+          for (let n = 1; restante > 0; n++) {
+            const parcial = Math.min(restante, LIMITE_TRANSF);
+            partes.push({ ...base, monto: String(parcial), nombre: `${base.nombre} (${n}/${totalPartes})`, fixed: true });
+            restante -= parcial;
+          }
+          warns.push(`Fila ${start + idx + 1}: monto $${montoNum.toLocaleString('es-CL')} supera el tope $${LIMITE_TRANSF.toLocaleString('es-CL')} → dividido en ${totalPartes} líneas`);
+          return partes;
+        }
+
+        return [base];
       });
+
+      const fixCount = filas.filter(f => f.fixed).length;
+
+      if (filas.length > 195) {
+        st(`⚠ Tras dividir los montos > $${LIMITE_TRANSF.toLocaleString('es-CL')} quedan ${filas.length} registros (máx. 195 por archivo). Reduce filas o genera otro archivo.`, 'err');
+        return;
+      }
 
       const total = filas.reduce((s, r) => s + (parseInt(r.monto, 10) || 0), 0);
 
