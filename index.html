@@ -190,17 +190,7 @@
         </div>
         <div class="field">
           <label>Descripción cabecera</label>
-          <input type="text" id="descripcion" value="PAGO NOMINA" placeholder="Máx 20 caracteres">
-        </div>
-      </div>
-      <div class="grid2">
-        <div class="field">
-          <label>Glosa Cuenta Origen</label>
-          <input type="text" id="glosaOrig" value="nomina" placeholder="Máx 20 chars">
-        </div>
-        <div class="field">
-          <label>Glosa Cuenta Destino</label>
-          <input type="text" id="glosaDesc" value="nomina" placeholder="Máx 20 chars">
+          <input type="text" id="descripcion" value="PAGO NOMINA" placeholder="Máx 20 caracteres · se replica en ambas glosas">
         </div>
       </div>
     </div>
@@ -542,9 +532,11 @@ function construirTXT() {
   const rutEmpresa  = document.getElementById('rutEmpresa').value.trim()   || '883971000';
   const cuentaCargo = document.getElementById('cuentaCargo').value.trim()  || '206388064';
   const tipoServ    = document.getElementById('tipoServicio').value;
-  const descripcion = (document.getElementById('descripcion').value.trim() || 'PAGO NOMINA').substring(0, 20);
-  const glosaOrig   = (document.getElementById('glosaOrig').value.trim()   || 'nomina').substring(0, 20);
-  const glosaDesc   = (document.getElementById('glosaDesc').value.trim()   || 'nomina').substring(0, 20);
+  // Limpia comas para no romper el formato CSV del TXT
+  const descripcion = (document.getElementById('descripcion').value.trim() || 'PAGO NOMINA')
+                        .replace(/,/g, ' ').replace(/\s{2,}/g, ' ').substring(0, 20);
+  const glosaOrig   = descripcion;
+  const glosaDesc   = descripcion;
 
   const cantPagos  = filas.length;
   const montoTotal = filas.reduce((s, r) => s + (parseInt(r.monto, 10) || 0), 0);
