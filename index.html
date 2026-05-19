@@ -292,20 +292,27 @@ function metodoPago(v) {
 function codigoBanco(v) {
   if (!v && v !== 0) return '';
   const s = v.toString().trim();
-  if (/^\d+$/.test(s)) return String(parseInt(s, 10));
+  // Si ya viene como número, normalizar a 3 dígitos (001, 039, 504...)
+  if (/^\d+$/.test(s)) return String(parseInt(s, 10)).padStart(3, '0');
   const t = s.toLowerCase();
-  if (t.includes('itaú') || t.includes('itau') || t.includes('corpbanca')) return '39';
-  if (t.includes('santander')) return '37';
-  if (t.includes('estado'))    return '12';
-  if (t.includes('chile'))     return '1';
-  if (t.includes('bci') || t.includes('credito')) return '16';
-  if (t.includes('scotiabank')) return '14';
-  if (t.includes('security'))   return '49';
-  if (t.includes('falabella'))  return '51';
-  if (t.includes('ripley'))     return '53';
-  if (t.includes('consorcio'))  return '55';
-  if (t.includes('coopeuch'))   return '672';
-  return s;
+  if (t.includes('itaú') || t.includes('itau') || t.includes('corpbanca')) return '039';
+  if (t.includes('santander'))     return '037';
+  if (t.includes('estado'))        return '012';
+  if (t.includes('chile'))         return '001';
+  if (t.includes('internacional')) return '009';
+  if (t.includes('bci') || t.includes('credito')) return '016';
+  if (t.includes('scotiabank'))    return '014';
+  if (t.includes('bice'))          return '028';
+  if (t.includes('hsbc'))          return '031';
+  if (t.includes('security'))      return '049';
+  if (t.includes('falabella'))     return '051';
+  if (t.includes('ripley'))        return '053';
+  if (t.includes('consorcio'))     return '055';
+  if (t.includes('bbva'))          return '504';
+  if (t.includes('coopeuch'))      return '672';
+  if (t.includes('mach'))          return '730';
+  if (t.includes('tenpo'))         return '732';
+  return s; // si no se pudo mapear, dejar tal cual para revisión manual
 }
 
 // ── FIX 1: limpiarNum limpia puntos, guiones y espacios ──────────────────────
@@ -314,10 +321,43 @@ function limpiarNum(v) {
   return v.toString().replace(/[\s.\-]/g, '');
 }
 
+// Convierte cualquier monto (1.500.000,50 / 1,500,000.50 / 1500000 / "$ 1.500.000")
+// a entero positivo. Devuelve '' si no se puede interpretar.
 function limpiarMonto(v) {
-  if (v === null || v === undefined) return '0';
-  if (typeof v === 'number') return Math.round(v).toString();
-  return v.toString().trim().replace(/\./g, '').replace(/,/g, '').replace(/[^\d]/g, '');
+  if (v === null || v === undefined || v === '') return '';
+  if (typeof v === 'number') {
+    if (!Number.isFinite(v)) return '';
+    return Math.round(v).toString();
+  }
+  let s = v.toString().trim().replace(/\$/g, '').replace(/\s/g, '');
+  const tienePunto = s.includes('.');
+  const tieneComa  = s.includes(',');
+  if (tienePunto && tieneComa) {
+    // El último separador es el decimal real
+    if (s.lastIndexOf(',') > s.lastIndexOf('.')) {
+      s = s.replace(/\./g, '').replace(',', '.');   // formato CL: 1.500.000,50
+    } else {
+      s = s.replace(/,/g, '');                       // formato US: 1,500,000.50
+    }
+  } else if (tieneComa) {
+    const partes = s.split(',');
+    if (partes.length === 2 && partes[1].length <= 2) {
+      s = partes[0] + '.' + partes[1];               // 1500000,50 → decimal
+    } else {
+      s = s.replace(/,/g, '');                       // 1,500,000 → miles
+    }
+  } else if (tienePunto) {
+    const partes = s.split('.');
+    if (partes.length === 2 && partes[1].length <= 2) {
+      // 1500000.50 → decimal, no tocar
+    } else {
+      s = s.replace(/\./g, '');                      // 1.500.000 → miles
+    }
+  }
+  s = s.replace(/[^\d.\-]/g, '');
+  const n = parseFloat(s);
+  if (!Number.isFinite(n)) return '';
+  return Math.round(n).toString();
 }
 
 function primeraFila(data) {
@@ -328,6 +368,56 @@ function primeraFila(data) {
   }
   return 0;
 }
+
+// ── FIX 4: Mapeo de columnas por nombre de encabezado ────────────────────────
+// Aliases reconocidos para cada campo (sin tildes, sin espacios, en minúsculas)
+const ALIASES = {
+  rut:     ['rut','run','rutbenef','rutbeneficiario','ruttrabajador','rutempleado','cedula','rutpersona'],
+  nombre:  ['nombre','razonsocial','beneficiario','trabajador','empleado','nombrebenef','nombrebeneficiario','nombretrabajador'],
+  monto:   ['monto','liquido','liquidoapagar','sueldoliquido','apagar','importe','valor','total','montopago','montoapagar'],
+  medio:   ['mediopago','metodopago','metododepago','mediodepago','forma','formapago','tipopago','formadepago'],
+  banco:   ['banco','codigobanco','codbanco','nombrebanco','bancodestino'],
+  tipoCta: ['tipocuenta','tipodecuenta','tipocta','clasecuenta'],
+  numCta:  ['numerocuenta','numcuenta','nrocuenta','cuenta','ncuenta','numerodecuenta','nodecuenta','ctacorriente'],
+  email:   ['email','correo','mail','emailbeneficiario','correoelectronico','correobenef'],
+};
+
+function normalizarTexto(s) {
+  return (s ?? '').toString().toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[°.\-_\s\/]/g, '');
+}
+
+function detectarMapeo(filaEnc) {
+  const map = {};
+  filaEnc.forEach((c, i) => {
+    if (!c) return;
+    const norm = normalizarTexto(c);
+    for (const [campo, aliases] of Object.entries(ALIASES)) {
+      if (aliases.includes(norm) && !(campo in map)) {
+        map[campo] = i;
+        break;
+      }
+    }
+  });
+  return map;
+}
+
+// Busca una fila de encabezado en las primeras 15 filas que tenga RUT, Monto y N° Cuenta.
+// Devuelve { fila, mapa } si la encuentra; null si no.
+function buscarEncabezado(data) {
+  const tope = Math.min(data.length, 15);
+  for (let i = 0; i < tope; i++) {
+    const mapa = detectarMapeo(data[i]);
+    if ('rut' in mapa && 'monto' in mapa && 'numCta' in mapa) {
+      return { fila: i, mapa };
+    }
+  }
+  return null;
+}
+
+// Fallback: mapeo posicional clásico (orden histórico A=RUT, B=Nombre, ... H=Email)
+const MAPA_POSICIONAL = { rut:0, nombre:1, monto:2, medio:3, banco:4, tipoCta:5, numCta:6, email:7 };
 
 function esTotales(r) {
   const colA = (r[0] ?? '').toString().trim().toLowerCase();
@@ -366,18 +456,40 @@ function leer(file) {
   const reader = new FileReader();
   reader.onload = e => {
     try {
-      const wb   = XLSX.read(e.target.result, { type: 'array', raw: true });
+      // raw:false hace que XLSX respete el formato de celda del Excel
+      // (preserva ceros iniciales de N° de cuenta si la columna está como texto)
+      const wb   = XLSX.read(e.target.result, { type: 'array', cellText: true });
       const ws   = wb.Sheets[wb.SheetNames[0]];
-      const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: true });
+      const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false });
 
-      const start = primeraFila(data);
+      // ── FIX 4: detectar encabezado por nombre de columna ───────────────────
+      // Si no hay encabezado reconocible, caer al mapeo posicional clásico.
+      let mapa, start, modoMapeo;
+      const enc = buscarEncabezado(data);
+      if (enc) {
+        mapa = enc.mapa;
+        start = enc.fila + 1;
+        modoMapeo = 'encabezado';
+      } else {
+        mapa = MAPA_POSICIONAL;
+        start = primeraFila(data);
+        modoMapeo = 'posicional';
+      }
+
+      // Lee la columna 'campo' de una fila usando el mapa activo
+      const col = (r, campo) => {
+        const i = mapa[campo];
+        return (i === undefined) ? '' : (r[i] ?? '');
+      };
+
+      const maxIdx = Math.max(...Object.values(mapa), 7);
+
       let rows = data.slice(start).filter(r =>
-        r.slice(0, 8).some(c => c !== null && c !== undefined && c.toString().trim() !== '')
+        r.slice(0, maxIdx + 1).some(c => c !== null && c !== undefined && c.toString().trim() !== '')
       );
       rows = rows.filter(r => !esTotales(r));
-
-      // ── FIX 2 aplicado: filtrar encabezados ───────────────────────────────
-      rows = rows.filter(r => !esEncabezado(r));
+      // Solo descartar filas que parezcan encabezado cuando estamos en modo posicional
+      if (modoMapeo === 'posicional') rows = rows.filter(r => !esEncabezado(r));
 
       if (rows.length === 0) {
         st('No se encontraron datos. Revisa el archivo.', 'err');
@@ -390,31 +502,36 @@ function leer(file) {
       }
 
       const warns  = [];
+      let errorCritico = false;
+
+      // Aviso visible si el mapeo fue por posición (no se encontró encabezado)
+      if (modoMapeo === 'posicional') {
+        warns.push('⚠ No se detectó fila de encabezado con nombres reconocibles. Se está leyendo por posición (A=RUT, B=Nombre, C=Monto, D=Medio, E=Banco, F=Tipo Cta, G=N° Cta, H=Email). Verifica que ese sea el orden real del archivo.');
+      }
 
       filas = rows.flatMap((r, idx) => {
 
-        // ── FIX 1: RUT pasa por limpiarNum para eliminar guiones y puntos ───
-        const rutRaw      = (r[0] ?? '').toString().trim();
+        const rutRaw      = col(r, 'rut').toString().trim();
         const rut         = limpiarNum(rutRaw);
 
-        // ── FIX 3: nombre sin comas (evita corrupción de columnas en TXT) ───
-        const nombreRaw   = (r[1] ?? '').toString().trim();
+        const nombreRaw   = col(r, 'nombre').toString().trim();
         const nombre      = nombreRaw.replace(/,/g, ' ').replace(/\s{2,}/g, ' ');
 
-        const montoRaw    = limpiarMonto(r[2]);
-        const medioRaw    = (r[3] ?? '').toString().trim();
+        const montoOrig   = col(r, 'monto');
+        const montoRaw    = limpiarMonto(montoOrig);
+        const medioRaw    = col(r, 'medio').toString().trim();
         const medioFinal  = metodoPago(medioRaw);
-        const codBancoRaw = r[4];
+        const codBancoRaw = col(r, 'banco');
         const codBancoFin = codigoBanco(codBancoRaw);
-        const tipoRaw     = (r[5] ?? '').toString().trim();
+        const tipoRaw     = col(r, 'tipoCta').toString().trim();
         const tipoCod     = tipoCuentaCodigo(tipoRaw);
-        const numOrig     = (r[6] ?? '').toString().trim();
+        const numOrig     = col(r, 'numCta').toString().trim();
         const numClean    = limpiarNum(numOrig);
-        const email       = (r[7] ?? '').toString().trim();
+        const email       = col(r, 'email').toString().trim();
 
         const sucursal = '';
+        const filaExcel = start + idx + 1;
 
-        // Detectar si hubo correcciones (incluye RUT con guión y nombre con coma)
         const fixed = (
           tipoRaw !== tipoCod ||
           numOrig !== numClean ||
@@ -423,25 +540,43 @@ function leer(file) {
           nombreRaw !== nombre
         );
 
-        if (tipoRaw && !tipoCod) {
-          warns.push(`Fila ${start + idx + 1}: tipo de cuenta no reconocido → "${tipoRaw}"`);
+        // ── FIX 5: validación dura de monto ──────────────────────────────
+        const montoNum = parseInt(montoRaw, 10);
+        if (!Number.isFinite(montoNum) || montoNum <= 0) {
+          warns.push(`Fila ${filaExcel}: monto inválido o cero "${montoOrig}" — corregir antes de generar TXT`);
+          errorCritico = true;
+          return [];
         }
-        if (!rut) warns.push(`Fila ${start + idx + 1}: RUT vacío`);
-        if (!montoRaw || montoRaw === '0') warns.push(`Fila ${start + idx + 1}: monto cero o vacío`);
 
-        // Advertir si el nombre tenía comas (se reemplazaron por espacio)
-        if (nombreRaw.includes(',')) {
-          warns.push(`Fila ${start + idx + 1}: nombre con coma corregido → "${nombre}"`);
+        if (!rut) {
+          warns.push(`Fila ${filaExcel}: RUT vacío`);
+          errorCritico = true;
         }
-        // Advertir si el RUT tenía guión o punto
+        if (tipoRaw && !tipoCod) {
+          warns.push(`Fila ${filaExcel}: tipo de cuenta no reconocido → "${tipoRaw}"`);
+        }
+        if (!codBancoFin && medioFinal === 'CAT_CSH_TRANSFER') {
+          warns.push(`Fila ${filaExcel}: banco vacío para transferencia`);
+          errorCritico = true;
+        }
+        if (!numClean && medioFinal === 'CAT_CSH_TRANSFER') {
+          warns.push(`Fila ${filaExcel}: N° cuenta vacío para transferencia`);
+          errorCritico = true;
+        }
+        // ── FIX 2: alerta de posible pérdida de ceros en N° cuenta ──────
+        if (numClean && numClean.length < 5 && medioFinal === 'CAT_CSH_TRANSFER') {
+          warns.push(`Fila ${filaExcel}: N° cuenta "${numClean}" muy corto — verifica si Excel borró ceros iniciales`);
+        }
+        if (nombreRaw.includes(',')) {
+          warns.push(`Fila ${filaExcel}: nombre con coma corregido → "${nombre}"`);
+        }
         if (rutRaw !== rut && rut.length > 0) {
-          warns.push(`Fila ${start + idx + 1}: RUT limpiado → "${rut}"`);
+          warns.push(`Fila ${filaExcel}: RUT limpiado → "${rut}"`);
         }
 
         const base = { rut, nombre, email, medioPago: medioFinal, codBanco: codBancoFin, tipoCuenta: tipoCod, numCuenta: numClean, monto: montoRaw, sucursal, fixed };
 
-        // ── FIX 4: montos > $7.000.000 se dividen (tope por transferencia Itaú) ─
-        const montoNum = parseInt(montoRaw, 10) || 0;
+        // Montos > $7.000.000 se dividen (tope por transferencia Itaú)
         if (montoNum > LIMITE_TRANSF) {
           const totalPartes = Math.ceil(montoNum / LIMITE_TRANSF);
           const partes = [];
@@ -451,12 +586,21 @@ function leer(file) {
             partes.push({ ...base, monto: String(parcial), nombre: `${base.nombre} (${n}/${totalPartes})`, fixed: true });
             restante -= parcial;
           }
-          warns.push(`Fila ${start + idx + 1}: monto $${montoNum.toLocaleString('es-CL')} supera el tope $${LIMITE_TRANSF.toLocaleString('es-CL')} → dividido en ${totalPartes} líneas`);
+          warns.push(`Fila ${filaExcel}: monto $${montoNum.toLocaleString('es-CL')} supera el tope $${LIMITE_TRANSF.toLocaleString('es-CL')} → dividido en ${totalPartes} líneas`);
           return partes;
         }
 
         return [base];
       });
+
+      // ── FIX 5: si hubo errores críticos, NO se habilita el botón ─────────
+      if (errorCritico) {
+        const wEl = document.getElementById('warnings');
+        wEl.innerHTML = warns.join('<br>');
+        wEl.style.display = 'block';
+        st('⚠ Hay filas con datos inválidos. Corrige el Excel y vuelve a cargar — no se generará el TXT.', 'err');
+        return;
+      }
 
       const fixCount = filas.filter(f => f.fixed).length;
 
