@@ -289,36 +289,55 @@ function metodoPago(v) {
   return 'CAT_CSH_TRANSFER';
 }
 
+// Códigos según tabla CMF (formato oficial Itaú v.100924, página 4 del PDF)
+// Campo "Numérico max 3" — se devuelve sin padding para mantener formato
+// consistente con los TXT que el portal ya valida (12, 51, 1...)
 function codigoBanco(v) {
   if (!v && v !== 0) return '';
   const s = v.toString().trim();
-  // Si ya viene como número, normalizar a 3 dígitos (001, 039, 504...)
-  if (/^\d+$/.test(s)) return String(parseInt(s, 10)).padStart(3, '0');
+  if (/^\d+$/.test(s)) return String(parseInt(s, 10));
   const t = s.toLowerCase();
-  if (t.includes('itaú') || t.includes('itau') || t.includes('corpbanca')) return '039';
-  if (t.includes('santander'))     return '037';
-  if (t.includes('estado'))        return '012';
-  if (t.includes('chile'))         return '001';
-  if (t.includes('internacional')) return '009';
-  if (t.includes('bci') || t.includes('credito')) return '016';
-  if (t.includes('scotiabank'))    return '014';
-  if (t.includes('bice'))          return '028';
-  if (t.includes('hsbc'))          return '031';
-  if (t.includes('security'))      return '049';
-  if (t.includes('falabella'))     return '051';
-  if (t.includes('ripley'))        return '053';
-  if (t.includes('consorcio'))     return '055';
-  if (t.includes('bbva'))          return '504';
+  if (t.includes('itaú') || t.includes('itau') || t.includes('corpbanca')) return '39';
+  if (t.includes('santander'))     return '37';
+  if (t.includes('estado'))        return '12';
+  if (t.includes('chile'))         return '1';
+  if (t.includes('internacional')) return '9';
+  if (t.includes('bci') || t.includes('credito')) return '16';
+  if (t.includes('scotiabank'))    return '14';
+  if (t.includes('bice'))          return '28';
+  if (t.includes('hsbc'))          return '31';
+  if (t.includes('security'))      return '49';
+  if (t.includes('falabella'))     return '51';
+  if (t.includes('ripley'))        return '53';
+  if (t.includes('consorcio'))     return '55';
   if (t.includes('coopeuch'))      return '672';
-  if (t.includes('mach'))          return '730';
-  if (t.includes('tenpo'))         return '732';
-  return s; // si no se pudo mapear, dejar tal cual para revisión manual
+  if (t.includes('polar'))         return '697';
+  if (t.includes('heroes') || t.includes('héroes')) return '729';
+  if (t.includes('tenpo'))         return '730';
+  if (t.includes('tapp') || t.includes('los andes')) return '732';
+  if (t.includes('global'))        return '738';
+  if (t.includes('copec'))         return '741';
+  if (t.includes('prex'))          return '743';
+  if (t.includes('mercado'))       return '875';
+  return s;
 }
 
 // ── FIX 1: limpiarNum limpia puntos, guiones y espacios ──────────────────────
 function limpiarNum(v) {
   if (v === null || v === undefined) return '';
   return v.toString().replace(/[\s.\-]/g, '');
+}
+
+// Quita caracteres ASCII extendido (tildes, ñ, símbolos) según exige el
+// formato Itaú v.100924: "La nómina no debe tener caracteres especiales
+// del tipo ASCII EXTENDIDO en su contenido ni en el nombre del archivo".
+// Ejemplos: MUÑOZ → MUNOZ, GARCÍA → GARCIA, IBÁÑEZ → IBANEZ.
+function soloAscii(v) {
+  if (v === null || v === undefined) return '';
+  return v.toString()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '') // descompone tildes y las quita
+    .replace(/ñ/g, 'n').replace(/Ñ/g, 'N')
+    .replace(/[^\x20-\x7e]/g, '');                    // descarta cualquier otro >127
 }
 
 // Convierte cualquier monto (1.500.000,50 / 1,500,000.50 / 1500000 / "$ 1.500.000")
@@ -515,7 +534,9 @@ function leer(file) {
         const rut         = limpiarNum(rutRaw);
 
         const nombreRaw   = col(r, 'nombre').toString().trim();
-        const nombre      = nombreRaw.replace(/,/g, ' ').replace(/\s{2,}/g, ' ');
+        // Sanitización doble: quitar comas (rompen CSV) y caracteres ASCII extendido
+        // (prohibidos por el formato oficial Itaú v.100924)
+        const nombre      = soloAscii(nombreRaw.replace(/,/g, ' ').replace(/\s{2,}/g, ' '));
 
         const montoOrig   = col(r, 'monto');
         const montoRaw    = limpiarMonto(montoOrig);
@@ -676,9 +697,11 @@ function construirTXT() {
   const rutEmpresa  = document.getElementById('rutEmpresa').value.trim()   || '883971000';
   const cuentaCargo = document.getElementById('cuentaCargo').value.trim()  || '206388064';
   const tipoServ    = document.getElementById('tipoServicio').value;
-  // Limpia comas para no romper el formato CSV del TXT
-  const descripcion = (document.getElementById('descripcion').value.trim() || 'PAGO NOMINA')
-                        .replace(/,/g, ' ').replace(/\s{2,}/g, ' ').substring(0, 20);
+  // Sanitización: sin comas (rompen CSV), sin ASCII extendido, máx 20 chars
+  const descripcion = soloAscii(
+    (document.getElementById('descripcion').value.trim() || 'PAGO NOMINA')
+      .replace(/,/g, ' ').replace(/\s{2,}/g, ' ')
+  ).substring(0, 20);
   const glosaOrig   = descripcion;
   const glosaDesc   = descripcion;
 
@@ -697,26 +720,34 @@ function construirTXT() {
     glosaDesc,
   ].join(',');
 
-  const registros = filas.map(r => [
-    r.rut,
-    r.nombre,
-    r.email,
-    r.medioPago,
-    r.codBanco,
-    r.tipoCuenta,
-    r.numCuenta,
-    '',
-    '',
-    '',
-    r.monto,
-    'CAT_CSH_CCTE',
-    cuentaCargo,
-    '',
-    '',
-    '',
-    glosaOrig,
-    glosaDesc,
-  ].join(','));
+  const registros = filas.map(r => {
+    const esTransfer = r.medioPago === 'CAT_CSH_TRANSFER';
+    // Para vale vista virtual/impreso y orden de pago el formato Itaú v.100924
+    // exige: código banco = '39' (Itaú emisor), tipo cuenta y N° cuenta en blanco.
+    const codBanco   = esTransfer ? r.codBanco   : '39';
+    const tipoCta    = esTransfer ? r.tipoCuenta : '';
+    const numCta     = esTransfer ? r.numCuenta  : '';
+    return [
+      r.rut,
+      r.nombre,
+      r.email,
+      r.medioPago,
+      codBanco,
+      tipoCta,
+      numCta,
+      '',                       // Fecha de Pago — sin uso
+      '',                       // Referencia1 — sin uso
+      '',                       // Referencia2 — sin uso
+      r.monto,
+      'CAT_CSH_CCTE',
+      cuentaCargo,
+      '',                       // Código Sucursal — en blanco
+      '',                       // Referencia Cliente — opcional
+      '',                       // Detalle del Pago — opcional
+      glosaOrig,
+      glosaDesc,
+    ].join(',');
+  });
 
   return [cabecera, ...registros].join('\n');
 }
