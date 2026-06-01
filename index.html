@@ -322,10 +322,38 @@ function codigoBanco(v) {
   return s;
 }
 
-// ── FIX 1: limpiarNum limpia puntos, guiones y espacios ──────────────────────
+// ── FIX 1: limpiarNum limpia puntos, COMAS, guiones y espacios ───────────────
 function limpiarNum(v) {
   if (v === null || v === undefined) return '';
-  return v.toString().replace(/[\s.\-]/g, '');
+  return v.toString().replace(/[\s.,\-]/g, '');
+}
+
+// ── FIX 6: extrae los dígitos REALES de una celda con un número largo ────────
+// Excel daña RUTs y N° de cuenta largos de dos formas típicas:
+//   • Notación científica:  111115487556  →  "1.11115E+11"  (pierde dígitos)
+//   • Separador de miles:    9772292       →  "9,772,292"     (mete comas)
+// Recibe el valor CRUDO (rawVal: número exacto o texto original) y el TEXTO
+// con formato (fmtVal). Prefiere el número crudo para no perder precisión,
+// pero conserva los ceros a la izquierda cuando la celda los trae de verdad
+// (celda en formato texto, o relleno por formato de celda tipo "0000000").
+function digitosCelda(rawVal, fmtVal) {
+  // dígitos (y K final de RUT) del valor crudo
+  let rawDig;
+  if (typeof rawVal === 'number' && Number.isFinite(rawVal)) {
+    rawDig = Math.round(rawVal).toString();          // entero exacto: sin sci ni comas
+  } else {
+    rawDig = (rawVal ?? '').toString().replace(/[^\dkK]/g, '');
+  }
+  // dígitos del texto con formato (puede traer ceros de relleno)
+  const fmtStr = (fmtVal ?? '').toString();
+  const fmtDig = fmtStr.replace(/[^\dkK]/g, '');
+  // Si el texto NO viene en notación científica y aporta ceros a la izquierda
+  // reales (es más largo y termina con los mismos dígitos), conserva ese texto.
+  const fmtSano = !/e/i.test(fmtStr);
+  if (fmtSano && fmtDig && fmtDig.length > rawDig.length && fmtDig.endsWith(rawDig)) {
+    return fmtDig;
+  }
+  return rawDig || fmtDig;
 }
 
 // Quita caracteres ASCII extendido (tildes, ñ, símbolos) según exige el
@@ -475,11 +503,17 @@ function leer(file) {
   const reader = new FileReader();
   reader.onload = e => {
     try {
-      // raw:false hace que XLSX respete el formato de celda del Excel
-      // (preserva ceros iniciales de N° de cuenta si la columna está como texto)
       const wb   = XLSX.read(e.target.result, { type: 'array', cellText: true });
       const ws   = wb.Sheets[wb.SheetNames[0]];
-      const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false });
+      // Doble lectura de la MISMA hoja:
+      //  • dataFmt = texto con formato visible (preserva ceros de relleno)
+      //  • dataRaw = valores crudos exactos (sin notación científica ni comas de miles)
+      // digitosCelda() combina ambos para RUT y N° de cuenta (ver FIX 6).
+      const dataFmt = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false });
+      const dataRaw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: true  });
+      // adjunta a cada fila formateada su gemela cruda (mismo índice de hoja)
+      dataFmt.forEach((r, i) => { if (Array.isArray(r)) r.__raw = dataRaw[i] || []; });
+      const data = dataFmt;
 
       // ── FIX 4: detectar encabezado por nombre de columna ───────────────────
       // Si no hay encabezado reconocible, caer al mapeo posicional clásico.
@@ -499,6 +533,11 @@ function leer(file) {
       const col = (r, campo) => {
         const i = mapa[campo];
         return (i === undefined) ? '' : (r[i] ?? '');
+      };
+      // versión cruda: valor sin formato (número exacto o texto original de la celda)
+      const colRaw = (r, campo) => {
+        const i = mapa[campo];
+        return (i === undefined || !r.__raw) ? '' : (r.__raw[i] ?? '');
       };
 
       const maxIdx = Math.max(...Object.values(mapa), 7);
@@ -531,7 +570,7 @@ function leer(file) {
       filas = rows.flatMap((r, idx) => {
 
         const rutRaw      = col(r, 'rut').toString().trim();
-        const rut         = limpiarNum(rutRaw);
+        const rut         = digitosCelda(colRaw(r, 'rut'), rutRaw);
 
         const nombreRaw   = col(r, 'nombre').toString().trim();
         // Sanitización doble: quitar comas (rompen CSV) y caracteres ASCII extendido
@@ -547,7 +586,7 @@ function leer(file) {
         const tipoRaw     = col(r, 'tipoCta').toString().trim();
         const tipoCod     = tipoCuentaCodigo(tipoRaw);
         const numOrig     = col(r, 'numCta').toString().trim();
-        const numClean    = limpiarNum(numOrig);
+        const numClean    = digitosCelda(colRaw(r, 'numCta'), numOrig);
         const email       = col(r, 'email').toString().trim();
 
         const sucursal = '';
