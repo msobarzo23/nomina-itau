@@ -421,11 +421,11 @@ function primeraFila(data) {
 const ALIASES = {
   rut:     ['rut','run','rutbenef','rutbeneficiario','ruttrabajador','rutempleado','cedula','rutpersona'],
   nombre:  ['nombre','razonsocial','beneficiario','trabajador','empleado','nombrebenef','nombrebeneficiario','nombretrabajador'],
-  monto:   ['monto','liquido','liquidoapagar','sueldoliquido','apagar','importe','valor','total','montopago','montoapagar'],
-  medio:   ['mediopago','metodopago','metododepago','mediodepago','forma','formapago','tipopago','formadepago'],
-  banco:   ['banco','codigobanco','codbanco','nombrebanco','bancodestino'],
-  tipoCta: ['tipocuenta','tipodecuenta','tipocta','clasecuenta'],
-  numCta:  ['numerocuenta','numcuenta','nrocuenta','cuenta','ncuenta','numerodecuenta','nodecuenta','ctacorriente'],
+  monto:   ['monto','liquido','liquidoapagar','sueldoliquido','apagar','importe','valor','total','montopago','montoapagar','deposito','montodeposito'],
+  medio:   ['mediopago','metodopago','metododepago','mediodepago','forma','formapago','tipopago','formadepago','modalidad'],
+  banco:   ['banco','codigobanco','codbanco','nombrebanco','bancodestino','codb','codigob','bco','codbco','codigodebanco','institucion','institucionfinanciera'],
+  tipoCta: ['tipocuenta','tipodecuenta','tipocta','clasecuenta','tipodecta'],
+  numCta:  ['numerocuenta','numcuenta','nrocuenta','cuenta','ncuenta','numerodecuenta','nodecuenta','ctacorriente','nrocta','ncta','cuentadestino','nrodecuenta','numerocta','ctadestino'],
   email:   ['email','correo','mail','emailbeneficiario','correoelectronico','correobenef'],
 };
 
@@ -435,18 +435,51 @@ function normalizarTexto(s) {
     .replace(/[°.\-_\s\/]/g, '');
 }
 
+// Reglas difusas de respaldo: si un título de columna no coincide EXACTO con
+// ningún alias, se intenta reconocerlo por palabra clave contenida. Así la app
+// tolera variantes libres que invente cada persona de RRHH ("Cod.B", "Banco
+// destino trabajador", "Monto depósito líquido", etc.).
+// El orden importa: rut antes que nombre (para que "RUT Beneficiario" caiga en
+// rut) y tipoCta antes que numCta (para que "Tipo de Cuenta" no caiga en cuenta).
+const REGLAS_DIFUSAS = [
+  ['rut',     n => n.startsWith('rut') || n.startsWith('run') || n.includes('cedula')],
+  ['tipoCta', n => n.includes('tipo') && (n.includes('cta') || n.includes('cuenta'))],
+  ['banco',   n => n.includes('banco') || n.includes('bco') || n.startsWith('codb')],
+  ['monto',   n => n.includes('monto') || n.includes('liquido') || n.includes('importe') || n.includes('deposito')],
+  ['medio',   n => n.includes('medio') || n.includes('metodo') || n.includes('forma') || n.includes('modalidad')],
+  ['numCta',  n => (n.includes('cuenta') || n.includes('cta')) && !n.includes('tipo')],
+  ['email',   n => n.includes('correo') || n.includes('mail')],
+  ['nombre',  n => n.includes('nombre') || n.includes('benef') || n.includes('trabajador') || n.includes('empleado') || n.includes('proveedor')],
+];
+
 function detectarMapeo(filaEnc) {
   const map = {};
+  const usadas = new Set();
+  // Pase 1: coincidencia exacta con la lista de aliases
   filaEnc.forEach((c, i) => {
     if (!c) return;
     const norm = normalizarTexto(c);
     for (const [campo, aliases] of Object.entries(ALIASES)) {
       if (aliases.includes(norm) && !(campo in map)) {
         map[campo] = i;
+        usadas.add(i);
         break;
       }
     }
   });
+  // Pase 2: reconocimiento difuso de los campos que quedaron sin columna
+  for (const [campo, regla] of REGLAS_DIFUSAS) {
+    if (campo in map) continue;
+    for (let i = 0; i < filaEnc.length; i++) {
+      if (usadas.has(i) || !filaEnc[i]) continue;
+      const norm = normalizarTexto(filaEnc[i]);
+      if (norm && regla(norm)) {
+        map[campo] = i;
+        usadas.add(i);
+        break;
+      }
+    }
+  }
   return map;
 }
 
@@ -546,8 +579,14 @@ function leer(file) {
         r.slice(0, maxIdx + 1).some(c => c !== null && c !== undefined && c.toString().trim() !== '')
       );
       rows = rows.filter(r => !esTotales(r));
-      // Solo descartar filas que parezcan encabezado cuando estamos en modo posicional
-      if (modoMapeo === 'posicional') rows = rows.filter(r => !esEncabezado(r));
+      if (modoMapeo === 'posicional') {
+        rows = rows.filter(r => !esEncabezado(r));
+      } else {
+        // En modo encabezado también se excluyen encabezados REPETIDOS más abajo
+        // (RRHH a veces pega varias tablas apiladas, cada una con sus títulos).
+        // Una fila de datos reales nunca matchea 3+ títulos de columna.
+        rows = rows.filter(r => Object.keys(detectarMapeo(r)).length < 3);
+      }
 
       if (rows.length === 0) {
         st('No se encontraron datos. Revisa el archivo.', 'err');
@@ -565,6 +604,30 @@ function leer(file) {
       // Aviso visible si el mapeo fue por posición (no se encontró encabezado)
       if (modoMapeo === 'posicional') {
         warns.push('⚠ No se detectó fila de encabezado con nombres reconocibles. Se está leyendo por posición (A=RUT, B=Nombre, C=Monto, D=Medio, E=Banco, F=Tipo Cta, G=N° Cta, H=Email). Verifica que ese sea el orden real del archivo.');
+      }
+
+      // Aviso si se detectó encabezado pero faltan columnas esperadas
+      if (modoMapeo === 'encabezado') {
+        const esperadas = { nombre: 'Nombre', medio: 'Medio de Pago', banco: 'Banco', tipoCta: 'Tipo de Cuenta', email: 'Correo' };
+        const faltan = Object.entries(esperadas).filter(([c]) => !(c in mapa)).map(([, n]) => n);
+        if (faltan.length) {
+          warns.push(`⚠ No se encontró columna de: ${faltan.join(', ')}. Revisa los títulos del archivo de RRHH — esos campos se leerán vacíos.`);
+        }
+      }
+
+      // Datos sueltos FUERA de las columnas de la tabla (p.ej. registros pegados
+      // a la derecha por error de RRHH) se ignoran, pero con aviso visible.
+      const colsExtra = new Set();
+      data.forEach(r => {
+        if (!Array.isArray(r)) return;
+        for (let j = maxIdx + 1; j < r.length; j++) {
+          const v = r[j];
+          if (v !== null && v !== undefined && v.toString().trim() !== '') colsExtra.add(j);
+        }
+      });
+      if (colsExtra.size) {
+        const letras = [...colsExtra].sort((a, b) => a - b).map(i => XLSX.utils.encode_col(i)).join(', ');
+        warns.push(`⚠ El archivo trae datos sueltos fuera de la tabla (columnas ${letras}) que fueron IGNORADOS. Verifica en el Excel que ahí no haya pagos pendientes de incluir.`);
       }
 
       filas = rows.flatMap((r, idx) => {
@@ -606,6 +669,14 @@ function leer(file) {
           warns.push(`Fila ${filaExcel}: monto inválido o cero "${montoOrig}" — corregir antes de generar TXT`);
           errorCritico = true;
           return [];
+        }
+
+        // Monto escrito como TEXTO en la celda (p.ej. " 1.066.000"): la fórmula
+        // SUM del Excel de RRHH lo ignora, así que su fila de total queda mala.
+        // La app SÍ lo paga — se avisa para explicar por qué los totales difieren.
+        const montoCrudo = colRaw(r, 'monto');
+        if (typeof montoCrudo !== 'number' && /[^\d]/.test(montoCrudo.toString().trim())) {
+          warns.push(`Fila ${filaExcel}: el monto venía como texto "${montoOrig.toString().trim()}" → se incluyó como $${montoNum.toLocaleString('es-CL')}. Ojo: la fila de TOTAL del Excel probablemente no lo suma.`);
         }
 
         if (!rut) {
