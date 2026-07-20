@@ -542,10 +542,15 @@ function leer(file) {
       //  • dataFmt = texto con formato visible (preserva ceros de relleno)
       //  • dataRaw = valores crudos exactos (sin notación científica ni comas de miles)
       // digitosCelda() combina ambos para RUT y N° de cuenta (ver FIX 6).
-      const dataFmt = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false });
-      const dataRaw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: true  });
-      // adjunta a cada fila formateada su gemela cruda (mismo índice de hoja)
-      dataFmt.forEach((r, i) => { if (Array.isArray(r)) r.__raw = dataRaw[i] || []; });
+      const dataFmt = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false, blankrows: true });
+      const dataRaw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: true,  blankrows: true });
+      // La hoja puede no partir en A1 (p.ej. rango A2:J50): la fila real del
+      // Excel se calcula desde el inicio del rango, ANTES de filtrar filas.
+      const filaBase = XLSX.utils.decode_range(ws['!ref'] || 'A1').s.r;
+      // adjunta a cada fila formateada su gemela cruda y su N° de fila real
+      dataFmt.forEach((r, i) => {
+        if (Array.isArray(r)) { r.__raw = dataRaw[i] || []; r.__excelRow = filaBase + i + 1; }
+      });
       const data = dataFmt;
 
       // ── FIX 4: detectar encabezado por nombre de columna ───────────────────
@@ -653,7 +658,13 @@ function leer(file) {
         const email       = col(r, 'email').toString().trim();
 
         const sucursal = '';
-        const filaExcel = start + idx + 1;
+        const filaExcel = r.__excelRow || (start + idx + 1);
+        // Referencia exacta de celda (p.ej. "celda E21") para el campo indicado,
+        // más el nombre de la persona para ubicar la fila sin contar en el Excel.
+        const celda = campo => (mapa[campo] !== undefined)
+          ? `celda ${XLSX.utils.encode_col(mapa[campo])}${filaExcel}`
+          : `fila ${filaExcel}`;
+        const quien = nombre ? ` (${nombre})` : '';
 
         const fixed = (
           tipoRaw !== tipoCod ||
@@ -666,7 +677,7 @@ function leer(file) {
         // ── FIX 5: validación dura de monto ──────────────────────────────
         const montoNum = parseInt(montoRaw, 10);
         if (!Number.isFinite(montoNum) || montoNum <= 0) {
-          warns.push(`Fila ${filaExcel}: monto inválido o cero "${montoOrig}" — corregir antes de generar TXT`);
+          warns.push(`✖ Fila ${filaExcel}${quien}: monto inválido o cero "${montoOrig}" en la ${celda('monto')} — corregir antes de generar TXT`);
           errorCritico = true;
           return [];
         }
@@ -680,29 +691,29 @@ function leer(file) {
         }
 
         if (!rut) {
-          warns.push(`Fila ${filaExcel}: RUT vacío`);
+          warns.push(`✖ Fila ${filaExcel}${quien}: RUT vacío — falta el RUT en la ${celda('rut')}`);
           errorCritico = true;
         }
         if (tipoRaw && !tipoCod) {
-          warns.push(`Fila ${filaExcel}: tipo de cuenta no reconocido → "${tipoRaw}"`);
+          warns.push(`Fila ${filaExcel}${quien}: tipo de cuenta no reconocido → "${tipoRaw}" en la ${celda('tipoCta')}`);
         }
         if (!codBancoFin && medioFinal === 'CAT_CSH_TRANSFER') {
-          warns.push(`Fila ${filaExcel}: banco vacío para transferencia`);
+          warns.push(`✖ Fila ${filaExcel}${quien}: falta el código de banco — escribe el banco en la ${celda('banco')}`);
           errorCritico = true;
         }
         if (!numClean && medioFinal === 'CAT_CSH_TRANSFER') {
-          warns.push(`Fila ${filaExcel}: N° cuenta vacío para transferencia`);
+          warns.push(`✖ Fila ${filaExcel}${quien}: falta el N° de cuenta — escribe la cuenta en la ${celda('numCta')}`);
           errorCritico = true;
         }
         // ── FIX 2: alerta de posible pérdida de ceros en N° cuenta ──────
         if (numClean && numClean.length < 5 && medioFinal === 'CAT_CSH_TRANSFER') {
-          warns.push(`Fila ${filaExcel}: N° cuenta "${numClean}" muy corto — verifica si Excel borró ceros iniciales`);
+          warns.push(`Fila ${filaExcel}${quien}: N° cuenta "${numClean}" muy corto en la ${celda('numCta')} — verifica si Excel borró ceros iniciales`);
         }
         if (nombreRaw.includes(',')) {
           warns.push(`Fila ${filaExcel}: nombre con coma corregido → "${nombre}"`);
         }
         if (rutRaw !== rut && rut.length > 0) {
-          warns.push(`Fila ${filaExcel}: RUT limpiado → "${rut}"`);
+          warns.push(`Fila ${filaExcel}${quien}: RUT limpiado → "${rut}"`);
         }
 
         const base = { rut, nombre, email, medioPago: medioFinal, codBanco: codBancoFin, tipoCuenta: tipoCod, numCuenta: numClean, monto: montoRaw, sucursal, fixed };
@@ -727,9 +738,12 @@ function leer(file) {
       // ── FIX 5: si hubo errores críticos, NO se habilita el botón ─────────
       if (errorCritico) {
         const wEl = document.getElementById('warnings');
+        // Errores bloqueantes (✖) primero, avisos informativos después
+        warns.sort((a, b) => (b.startsWith('✖') ? 1 : 0) - (a.startsWith('✖') ? 1 : 0));
         wEl.innerHTML = warns.join('<br>');
         wEl.style.display = 'block';
-        st('⚠ Hay filas con datos inválidos. Corrige el Excel y vuelve a cargar — no se generará el TXT.', 'err');
+        const nCrit = warns.filter(w => w.startsWith('✖')).length;
+        st(`✖ ${nCrit === 1 ? 'Hay 1 error bloqueante' : 'Hay ' + nCrit + ' errores bloqueantes'} (marcados con ✖, con fila y celda exacta abajo). Corrige el Excel y vuelve a cargar — no se generará el TXT.`, 'err');
         return;
       }
 
